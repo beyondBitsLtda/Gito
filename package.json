@@ -1,0 +1,20 @@
+{
+  "name": "gito",
+  "version": "1.0.0",
+  "description": "Versionar o trabalho sem terminal e sem saber git - seu trabalho, estacao por estacao. Roda na maquina do dev, abre no navegador em 127.0.0.1 e opera o git com a identidade e as permissoes dele.",
+  "main": "app.js",
+  "bin": {
+    "gito": "app.js"
+  },
+  "scripts": {
+    "start": "node app.js",
+    "teste": "node teste/teste-seguranca.js && node teste/teste-git.js && node teste/teste-salvar.js && node teste/teste-versoes.js && node teste/teste-realce.js && node teste/teste-arvore.js && node teste/teste-beco.js && node teste/teste-branches.js && node teste/teste-gitlab.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "author": "DELP Engenharia - TI / Desenvolvimento Fluig",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {}
+}

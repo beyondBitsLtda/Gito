@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gito</title>
+<!-- O ícone é o mesmo glifo da marca: uma linha de metrô com três estações
+     (cada salvamento é uma parada). Arquivo próprio, e não data URI: a
+     política de segurança do servidor só aceita imagem do próprio app. -->
+<link rel="icon" href="/gito-icone.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<!-- A faixa das linhas: quatro cores, quatro estados do app. Não é enfeite -
+     é a legenda que a lista de repositórios usa logo abaixo. -->
+<div class="faixa" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<header class="topo">
+    <div class="topo__marca">
+        <span class="marca__glifo" aria-hidden="true"></span>
+        <span class="marca__nome">gito</span>
+        <span class="marca__lema">seu trabalho, estação por estação</span>
+    </div>
+    <nav class="topo__nav" aria-label="Telas">
+        <button type="button" class="nav__item nav__item--ativo" data-tela="repos">Meus repositórios</button>
+        <button type="button" class="nav__item" data-tela="pastas">Minhas pastas</button>
+    </nav>
+    <div class="topo__fim">
+        <span class="topo__eu" data-eu></span>
+        <button type="button" class="tema" data-acao="tema" title="Tema">◐</button>
+    </div>
+</header>
+
+<main class="conteudo">
+
+    <!-- ================= IDENTIDADE =================
+         Aparece antes de tudo quando o git não sabe quem é a pessoa. Não é
+         uma tela opcional: commit com autoria errada só aparece semanas
+         depois, no histórico, quando já está em todos os commits. -->
+    <section class="tela" data-tela-id="identidade" hidden>
+        <div class="boas-vindas">
+            <span class="boas-vindas__linha" aria-hidden="true"><i></i><i></i><i></i></span>
+            <h1 class="titulo">Antes da primeira estação</h1>
+            <p class="ajuda">
+                O git precisa saber quem você é para assinar o que você salvar.
+                Isso é perguntado uma vez só, e vale para todos os repositórios desta máquina.
+            </p>
+        </div>
+        <div class="bloco bloco--estreito">
+            <div class="campo">
+                <label for="id-nome">Seu nome</label>
+                <input id="id-nome" type="text" placeholder="Brayan Rodrigues">
+            </div>
+            <div class="campo">
+                <label for="id-email">Seu e-mail</label>
+                <input id="id-email" type="email" placeholder="nome@delp.com.br">
+            </div>
+            <button type="button" class="btn btn--principal" data-acao="salvar-identidade">Continuar</button>
+            <div class="aviso" data-aviso-identidade hidden></div>
+        </div>
+    </section>
+
+    <!-- ================= REPOSITÓRIOS =================
+         A lista é desenhada como uma linha de metrô: cada repositório é uma
+         estação, e a cor da estação é o estado dele - o mesmo código da
+         legenda ao lado do título. -->
+    <section class="tela" data-tela-id="repos">
+        <div class="cabecalho">
+            <div>
+                <h1 class="titulo">Meus repositórios</h1>
+                <p class="ajuda" data-resumo>Lendo…</p>
+            </div>
+            <ul class="legenda" aria-label="Legenda das cores">
+                <li class="legenda__item legenda__item--limpo">tudo salvo</li>
+                <li class="legenda__item legenda__item--pendente">a salvar</li>
+                <li class="legenda__item legenda__item--enviar">a enviar</li>
+                <li class="legenda__item legenda__item--sem-git">sem versão</li>
+            </ul>
+            <button type="button" class="btn" data-acao="atualizar">↻ Atualizar</button>
+        </div>
+        <div class="linha-metro" data-lista-repos></div>
+    </section>
+
+    <!-- ================= UM REPOSITÓRIO ================= -->
+    <section class="tela" data-tela-id="repo" hidden>
+        <div class="cabecalho">
+            <div>
+                <button type="button" class="voltar" data-acao="voltar">&larr; Meus repositórios</button>
+                <h1 class="titulo" data-repo-nome></h1>
+                <p class="ajuda" data-repo-info></p>
+            </div>
+        </div>
+
+        <div data-repo-corpo></div>
+    </section>
+
+    <!-- ================= PASTAS ================= -->
+    <section class="tela" data-tela-id="pastas" hidden>
+        <h1 class="titulo">Minhas pastas</h1>
+        <p class="ajuda">
+            Onde o Gito procura seus repositórios. Pode colar o caminho como aparece no
+            Explorer — inclusive <code>Z:\...</code>, que aqui funciona porque o app roda
+            na sua sessão. Uma pasta por linha.
+        </p>
+        <div class="bloco">
+            <textarea data-pastas rows="8" spellcheck="false"
+                      placeholder="Z:\VESPASIANO\Depto Tecnologia da Informação\22 - Repositórios&#10;C:\Users\voce\Documents\Repositórios"></textarea>
+            <div class="acoes acoes--rodape">
+                <button type="button" class="btn btn--principal" data-acao="salvar-pastas">Salvar</button>
+                <button type="button" class="btn" data-acao="procurar">Procurar pasta…</button>
+            </div>
+        </div>
+
+        <!-- O navegador de pastas. Nasce fechado; o botão acima o abre.
+             Existe porque colar caminho à mão é a pior parte de configurar o
+             app: ninguém lembra se é "Repositorios" ou "Repositórios", e o
+             acento errado vira "pasta não encontrada" sem dizer por quê. -->
+        <div class="procurar" data-procurar hidden>
+            <div class="procurar__topo">
+                <button type="button" class="btn btn--mini" data-acao="subir">↑ Subir</button>
+                <span class="procurar__caminho" data-procurar-caminho>Escolha uma unidade</span>
+            </div>
+            <div class="procurar__lista" data-procurar-lista></div>
+            <div class="procurar__rodape">
+                <button type="button" class="btn btn--principal" data-acao="usar-pasta" disabled>
+                    Usar esta pasta
+                </button>
+                <button type="button" class="btn" data-acao="fechar-procurar">Cancelar</button>
+            </div>
+        </div>
+        <div class="aviso" data-aviso-pastas hidden></div>
+        <p class="ajuda ajuda--fraca" data-arquivo-config></p>
+    </section>
+
+</main>
+
+<div class="recado" data-recado hidden></div>
+
+<!-- O realce vem ANTES do app: ele expõe window.realce, que o app usa
+     na primeira pintura. -->
+<script src="/realce.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

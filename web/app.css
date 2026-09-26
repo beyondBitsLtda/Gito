@@ -1,0 +1,650 @@
+/* ============================================================================
+   Gito - identidade visual
+   ============================================================================
+   A IDEIA: UM MAPA DE METRO.
+
+   Um repositorio e uma linha; cada salvamento, uma estacao. A lista de
+   repositorios e desenhada como uma linha vertical com uma estacao por
+   repositorio, e o historico de um repositorio e a mesma linha com uma
+   parada por versao salva. A cor da estacao e o estado - e e a mesma cor da
+   faixa no topo e da legenda ao lado do titulo, entao ninguem precisa decorar.
+
+   CORES: so a paleta corporativa, usada de outro jeito. O Mooring (#213D75)
+   e a cor da marca e da acao principal; o Delp Red fica RESERVADO ao unico
+   alarme de verdade (pasta sem versao, conflito, erro) - nunca fundo de bloco.
+
+     Servicos   #0B861D   tudo salvo
+     Industria  #FF6B05   tem coisa a salvar
+     Subsea     #2362D3   salvo, mas falta enviar
+     Delp Red   #CC0F10   NAO VERSIONADO / conflito / erro
+
+   Texto colorido so onde o contraste passa do AA (o Industria sobre branco
+   nao passa): nos outros casos a cor vai num PONTO ao lado de texto escuro.
+
+   Barlow com fallback local, sem @import: a estacao pode estar atras de
+   proxy, e fonte externa que demora deixa a tela piscando.
+
+   TEMA: claro e escuro. Sem escolha, segue o sistema; o botao do topo fixa
+   um dos dois (data-theme na raiz).
+   ========================================================================== */
+:root {
+    --mooring: #213D75;
+    --subsea: #2362D3;
+    --industria: #FF6B05;
+    --servicos: #0B861D;
+    --vermelho: #CC0F10;
+    --preto: #000000;
+    --branco: #FFFFFF;
+    --areia: #EAE5DF;
+    --cinza: #B0B0B0;
+
+    /* tema claro */
+    --fundo: #FFFFFF;
+    --grade: rgba(176, 176, 176, .38);
+    --superficie: #FFFFFF;
+    --superficie-2: #EAE5DF;
+    --superficie-3: rgba(234, 229, 223, .55);
+    --borda: rgba(176, 176, 176, .55);
+    --tinta: #000000;
+    --tinta-2: rgba(0, 0, 0, .72);
+    --tinta-3: rgba(0, 0, 0, .58);
+    --marca: var(--mooring);
+    --marca-texto: var(--branco);
+    --trilho: var(--mooring);
+    --sombra: 0 1px 2px rgba(0, 0, 0, .06), 0 6px 18px rgba(33, 61, 117, .08);
+    --sombra-forte: 0 2px 4px rgba(0, 0, 0, .08), 0 12px 28px rgba(33, 61, 117, .16);
+    --alarme-fundo: rgba(204, 15, 16, .08);
+    --alarme-texto: #CC0F10;
+    --glifo: url("/gito.svg");
+
+    --raio: 14px;
+    --raio-p: 9px;
+    --pilula: 999px;
+    --fonte: Barlow, Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+    color-scheme: light;
+}
+
+/* tema escuro: pelo sistema (se ninguem escolheu claro) ou pelo botao */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --fundo: #000000;
+        --grade: rgba(234, 229, 223, .09);
+        --superficie: rgba(234, 229, 223, .06);
+        --superficie-2: rgba(234, 229, 223, .12);
+        --superficie-3: rgba(234, 229, 223, .05);
+        --borda: rgba(234, 229, 223, .16);
+        --tinta: #EAE5DF;
+        --tinta-2: rgba(234, 229, 223, .80);
+        --tinta-3: rgba(234, 229, 223, .62);
+        --marca: #EAE5DF;
+        --marca-texto: #000000;
+        --trilho: rgba(234, 229, 223, .55);
+        --sombra: none;
+        --sombra-forte: 0 0 0 1px rgba(234, 229, 223, .22);
+        --alarme-fundo: rgba(204, 15, 16, .18);
+        --alarme-texto: #FFFFFF;
+        --glifo: url("/gito-escuro.svg");
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --fundo: #000000;
+    --grade: rgba(234, 229, 223, .09);
+    --superficie: rgba(234, 229, 223, .06);
+    --superficie-2: rgba(234, 229, 223, .12);
+    --superficie-3: rgba(234, 229, 223, .05);
+    --borda: rgba(234, 229, 223, .16);
+    --tinta: #EAE5DF;
+    --tinta-2: rgba(234, 229, 223, .80);
+    --tinta-3: rgba(234, 229, 223, .62);
+    --marca: #EAE5DF;
+    --marca-texto: #000000;
+    --trilho: rgba(234, 229, 223, .55);
+    --sombra: none;
+    --sombra-forte: 0 0 0 1px rgba(234, 229, 223, .22);
+    --alarme-fundo: rgba(204, 15, 16, .18);
+    --alarme-texto: #FFFFFF;
+    --glifo: url("/gito-escuro.svg");
+    color-scheme: dark;
+}
+
+/* ::before e ::after NAO herdam do * : sem eles aqui, as estacoes (que sao
+   pseudo-elementos) ganham a borda por fora e saem do trilho. */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* hidden vale sempre: o display de uma classe (o recado e flex) nao pode
+   passar por cima dele e deixar uma pilula vazia na tela. */
+[hidden] { display: none !important; }
+
+/* O fundo e papel de mapa: uma grade de pontos bem leve. */
+body {
+    margin: 0;
+    font-family: var(--fonte);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--tinta);
+    background-color: var(--fundo);
+    background-image: radial-gradient(var(--grade) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    min-height: 100vh;
+}
+
+/* ---------- A FAIXA DAS LINHAS ---------- */
+.faixa { display: flex; height: 5px; }
+.faixa i { flex: 1; }
+.faixa i:nth-child(1) { background: var(--servicos); }
+.faixa i:nth-child(2) { background: var(--industria); }
+.faixa i:nth-child(3) { background: var(--subsea); }
+.faixa i:nth-child(4) { background: var(--vermelho); flex: .35; }
+
+/* ---------- TOPO ---------- */
+.topo {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 24px; height: 64px;
+    background: var(--fundo);
+    border-bottom: 1px solid var(--borda);
+}
+.topo__marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.marca__glifo {
+    flex: 0 0 34px; width: 34px; height: 34px;
+    background: var(--glifo) center / contain no-repeat;
+}
+.marca__nome {
+    font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1;
+    color: var(--marca);
+}
+.marca__lema {
+    font-size: 12px; color: var(--tinta-3); white-space: nowrap;
+    padding-left: 10px; border-left: 1px solid var(--borda);
+}
+/* A pagina sem token tem so a marca, sem os spans filhos: o texto vai direto
+   no .topo__marca. */
+.topo__marca { font-size: 24px; font-weight: 700; color: var(--marca); letter-spacing: -.03em; }
+
+.topo__nav {
+    display: flex; gap: 2px; padding: 4px;
+    background: var(--superficie-2); border-radius: var(--pilula);
+}
+.nav__item {
+    appearance: none; border: 0; background: transparent;
+    color: var(--tinta-2); font-family: inherit; font-size: 13px; font-weight: 600;
+    padding: 7px 16px; border-radius: var(--pilula); cursor: pointer;
+}
+.nav__item:hover { color: var(--tinta); }
+.nav__item--ativo, .nav__item--ativo:hover {
+    background: var(--marca); color: var(--marca-texto); box-shadow: var(--sombra);
+}
+
+.topo__fim { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.topo__eu { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta-2); cursor: default; }
+.eu__avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--marca); color: var(--marca-texto);
+    font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    box-shadow: 0 0 0 3px var(--fundo), 0 0 0 5px var(--servicos);
+}
+.tema {
+    appearance: none; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--borda); background: var(--superficie); color: var(--tinta);
+    font-size: 15px; line-height: 1; cursor: pointer;
+}
+.tema:hover { border-color: var(--subsea); }
+
+/* ---------- LAYOUT ---------- */
+.conteudo { padding: 26px 28px 60px; max-width: 1500px; margin: 0 auto; }
+.conteudo .ajuda, .conteudo > .tela > p { max-width: 900px; }
+.tela > p.ajuda { margin-bottom: 16px; }
+.cabecalho { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.cabecalho > div:first-child { flex: 1 1 320px; }
+.titulo { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 4px; }
+.ajuda { margin: 0; color: var(--tinta-2); font-size: 13.5px; }
+.ajuda--fraca { color: var(--tinta-3); font-size: 12px; margin-top: 14px; }
+
+.voltar {
+    appearance: none; border: 0; background: none; padding: 0 0 8px;
+    color: var(--tinta-2); font-family: inherit; font-size: 13px;
+    font-weight: 600; cursor: pointer;
+}
+.voltar:hover { color: var(--subsea); }
+
+/* ---------- A LEGENDA ---------- */
+.legenda {
+    display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    list-style: none; margin: 6px 0 0; padding: 0;
+    font-size: 12px; color: var(--tinta-2);
+}
+.legenda__item { display: flex; align-items: center; gap: 6px; }
+.legenda__item::before {
+    content: ''; width: 13px; height: 13px; border-radius: 50%;
+    border: 3px solid currentColor; background: var(--fundo);
+}
+.legenda__item--limpo::before   { color: var(--servicos); }
+.legenda__item--pendente::before{ color: var(--industria); }
+.legenda__item--enviar::before  { color: var(--subsea); }
+.legenda__item--sem-git::before { color: var(--vermelho); }
+
+/* ---------- A LINHA DE METRO (lista de repositorios) ----------
+   O trilho corre pela lista inteira; cada cartao tem a sua estacao em cima
+   dele, na cor do estado. */
+.linha-metro { position: relative; padding-left: 44px; }
+.linha-metro::before {
+    content: ''; position: absolute; left: 16px; top: 26px; bottom: 26px;
+    width: 6px; border-radius: 3px; background: var(--trilho); opacity: .9;
+}
+.linha-metro:has(> .vazio)::before { display: none; }
+.linha-metro:has(> .vazio) { padding-left: 0; }
+
+.repo {
+    position: relative;
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; margin-bottom: 10px; padding: 14px 18px;
+    background: var(--superficie); color: inherit;
+    border: 1px solid var(--borda); border-radius: var(--raio);
+    box-shadow: var(--sombra);
+    font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;
+    transition: transform .12s ease-out, box-shadow .12s ease-out, border-color .12s;
+}
+.repo:hover { transform: translateX(3px); box-shadow: var(--sombra-forte); border-color: var(--subsea); }
+.repo:focus-visible { outline: 3px solid var(--subsea); outline-offset: 2px; }
+/* a estacao */
+.repo::before {
+    content: ''; position: absolute; left: -38px; top: 50%;
+    width: 24px; height: 24px; margin-top: -12px; border-radius: 50%;
+    background: var(--fundo); border: 6px solid var(--cinza);
+    box-shadow: 0 0 0 3px var(--fundo);
+}
+.repo--limpo::before    { border-color: var(--servicos); }
+.repo--pendente::before { border-color: var(--industria); }
+.repo--enviar::before   { border-color: var(--subsea); }
+.repo--sem-git::before  { border-color: var(--vermelho); background: var(--vermelho); }
+.repo--erro::before     { border-color: var(--cinza); border-style: dashed; }
+
+/* Colunas de largura fixa a partir da branch: com o estado alinhado, da para
+   descer a lista lendo so a ultima coluna. */
+.repo__nome { font-weight: 700; font-size: 15px; flex: 1 1 260px; min-width: 200px; }
+.repo__caminho { display: block; font-size: 11.5px; color: var(--tinta-3); font-weight: 400; word-break: break-all; }
+.repo__branch {
+    flex: 0 0 auto; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--mono); font-size: 11.5px; color: var(--tinta-2);
+    background: var(--superficie-2); padding: 2px 9px; border-radius: var(--pilula);
+}
+.repo__branch:empty { display: none; }
+.repo__commit { color: var(--tinta-3); font-size: 12.5px; flex: 0 0 280px; overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+.repo__quando { color: var(--tinta-3); font-size: 12.5px; flex: 0 0 100px; text-align: right; }
+.repo__estado {
+    flex: 0 0 210px; display: flex; align-items: center; justify-content: flex-end; gap: 7px;
+    font-size: 13px; font-weight: 600; color: var(--tinta); text-align: right;
+}
+.repo__estado::before { content: ''; flex: 0 0 9px; height: 9px; border-radius: 50%; background: var(--cinza); }
+.repo--limpo    .repo__estado::before { background: var(--servicos); }
+.repo--pendente .repo__estado::before { background: var(--industria); }
+.repo--enviar   .repo__estado::before { background: var(--subsea); }
+.repo--sem-git  .repo__estado { color: var(--vermelho); }
+.repo--sem-git  .repo__estado::before { background: var(--vermelho); }
+.repo--erro     .repo__estado { color: var(--tinta-3); font-weight: 500; }
+
+/* ---------- BLOCOS ---------- */
+.bloco {
+    background: var(--superficie); border: 1px solid var(--borda);
+    border-radius: var(--raio); padding: 18px; margin-bottom: 14px;
+    box-shadow: var(--sombra);
+}
+.bloco--estreito { max-width: 520px; }
+.bloco__titulo {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--tinta-2); margin: 0 0 10px;
+}
+.bloco__titulo::before { content: ''; width: 14px; height: 4px; border-radius: 2px; background: var(--subsea); }
+
+/* ---------- LISTA DE ARQUIVOS ---------- */
+.arquivo { display: flex; align-items: center; gap: 9px; padding: 5px 6px; border-radius: var(--raio-p); }
+.arquivo:hover { background: var(--superficie-3); }
+.arquivo input { margin: 0; width: 16px; height: 16px; accent-color: var(--mooring); }
+.arquivo__nome { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+.arquivo__tag {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; padding: 2px 8px; border-radius: var(--pilula);
+    background: var(--superficie-2); color: var(--tinta-2);
+    display: inline-flex; align-items: center; gap: 5px;
+}
+.arquivo__tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--cinza); }
+.arquivo__tag--novo::before      { background: var(--servicos); }
+.arquivo__tag--alterado::before,
+.arquivo__tag--renomeado::before { background: var(--industria); }
+.arquivo__tag--apagado           { color: var(--alarme-texto); background: var(--alarme-fundo); }
+.arquivo__tag--apagado::before   { background: var(--vermelho); }
+.arquivo__tag--conflito          { background: var(--vermelho); color: var(--branco); }
+.arquivo__tag--conflito::before  { background: var(--branco); }
+
+/* Estado de um Merge Request: Servicos = pronto; Industria = esperando;
+   Delp Red = o que trava. Texto preto sobre Industria (branco nao passa o AA). */
+.mr-tom--ok     { background: var(--servicos);  color: var(--branco); }
+.mr-tom--espera { background: var(--industria); color: var(--preto); }
+.mr-tom--ruim   { background: var(--vermelho);  color: var(--branco); }
+.mr-tom--neutro { background: var(--superficie-2); color: var(--tinta-2); }
+.mr-descricao {
+    white-space: pre-wrap; font-family: inherit; font-size: 13px; color: var(--tinta);
+    background: var(--superficie-3); border-radius: var(--raio-p); padding: 10px 13px; margin: 8px 0;
+    max-height: 220px; overflow: auto;
+}
+
+/* ---------- FORMULARIO ---------- */
+.campo { margin-bottom: 14px; max-width: 460px; }
+.campo label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--tinta-2); }
+input[type=text], input[type=email], input[type=password], textarea, select {
+    width: 100%; font-family: inherit; font-size: 13.5px;
+    padding: 9px 12px; border: 1px solid var(--borda);
+    border-radius: var(--raio-p); background: var(--superficie); color: var(--tinta);
+}
+textarea { font-family: var(--mono); font-size: 12.5px; max-width: 760px; resize: vertical; display: block; }
+input:focus, textarea:focus, select:focus { outline: 3px solid var(--subsea); outline-offset: 1px; border-color: transparent; }
+
+/* ---------- BOTOES: pilulas ---------- */
+.btn {
+    appearance: none; font-family: inherit; font-size: 13px; font-weight: 600;
+    padding: 8px 18px; border-radius: var(--pilula); cursor: pointer;
+    border: 1px solid var(--borda); background: var(--superficie); color: var(--tinta);
+    transition: border-color .12s, background-color .12s, transform .08s;
+}
+.btn:hover:not([disabled]) { border-color: var(--subsea); }
+.btn:active:not([disabled]) { transform: translateY(1px); }
+.btn:focus-visible { outline: 3px solid var(--subsea); outline-offset: 2px; }
+.btn--principal { background: var(--marca); border-color: var(--marca); color: var(--marca-texto); }
+.btn--principal:hover:not([disabled]) { background: var(--subsea); border-color: var(--subsea); color: var(--branco); }
+.btn[disabled] { opacity: .45; cursor: default; }
+.btn--mini {
+    font-size: 12px; padding: 5px 13px;
+    display: inline-block; text-decoration: none; white-space: nowrap;
+}
+a.btn--mini:hover { text-decoration: none; }
+
+/* ---------- AVISOS ---------- */
+.aviso {
+    margin: 12px 0; padding: 10px 14px; border-radius: var(--raio-p);
+    background: var(--alarme-fundo); color: var(--alarme-texto); font-size: 13px;
+    border-left: 4px solid var(--vermelho);
+}
+
+/* O vazio tem a sua propria linha: tres estacoes esperando o primeiro trem. */
+.vazio {
+    background: var(--superficie); border: 2px dashed var(--borda);
+    border-radius: var(--raio); padding: 30px 28px 28px; text-align: center; color: var(--tinta-2);
+}
+.vazio::before {
+    content: ''; display: block; width: 120px; height: 22px; margin: 0 auto 14px;
+    background:
+        radial-gradient(circle, var(--fundo) 4px, var(--servicos) 4.5px, var(--servicos) 8px, transparent 8.5px) 0 50% / 22px 22px no-repeat,
+        radial-gradient(circle, var(--fundo) 4px, var(--industria) 4.5px, var(--industria) 8px, transparent 8.5px) 50% 50% / 22px 22px no-repeat,
+        radial-gradient(circle, var(--fundo) 4px, var(--subsea) 4.5px, var(--subsea) 8px, transparent 8.5px) 100% 50% / 22px 22px no-repeat,
+        linear-gradient(var(--trilho), var(--trilho)) 50% 50% / 100% 4px no-repeat;
+}
+.vazio p { margin: 0 0 12px; }
+
+/* O recado de confirmacao: uma pilula que some sozinha. */
+.recado {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--mooring); color: var(--branco);
+    padding: 11px 20px 11px 16px; border-radius: var(--pilula); font-size: 13.5px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28); z-index: 50; max-width: 90vw;
+}
+.recado::before { content: ''; flex: 0 0 10px; height: 10px; border-radius: 50%; background: var(--servicos); box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
+.recado--erro { background: var(--vermelho); }
+.recado--erro::before { background: var(--branco); }
+/* O aviso de app encerrado nao some: enquanto a janela preta estiver fechada,
+   nada funciona, e essa e a unica mensagem que explica o porque. */
+.recado--fixo {
+    left: 0; right: 0; bottom: 0; transform: none; justify-content: center;
+    max-width: none; border-radius: 0; padding: 14px; font-weight: 600;
+}
+
+code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--superficie-2); padding: 1px 6px; border-radius: 5px;
+}
+
+/* ---------- A TELA DE SALVAR, EM DUAS COLUNAS ---------- */
+.repo-grade { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+@media (min-width: 1040px) {
+    .repo-grade { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); }
+    .repo-grade .bloco { margin-bottom: 0; }
+    .repo-grade__acao { position: sticky; top: 84px; }
+}
+
+/* ---------- ACOES ---------- */
+.acoes { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.acoes--rodape { margin: 12px 0 0; }
+.acoes__nota { align-self: center; font-size: 12px; color: var(--tinta-3); }
+.linha-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.linha-acoes input[type=text] { width: auto; min-width: 160px; }
+.linha-acoes select { width: auto; min-width: 240px; max-width: 100%; }
+
+/* ---------- SUB-ABAS: um seletor de pilulas ---------- */
+.subnav {
+    display: inline-flex; flex-wrap: wrap; gap: 2px; margin-bottom: 16px; padding: 4px;
+    background: var(--superficie-2); border-radius: var(--pilula);
+}
+.subnav__item {
+    appearance: none; border: 0; background: none;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--tinta-2); padding: 7px 16px; cursor: pointer; border-radius: var(--pilula);
+}
+.subnav__item:hover { color: var(--tinta); }
+.subnav__item--ativo, .subnav__item--ativo:hover { background: var(--superficie); color: var(--tinta); box-shadow: var(--sombra); }
+:root[data-theme="dark"] .subnav__item--ativo { background: var(--marca); color: var(--marca-texto); }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .subnav__item--ativo { background: var(--marca); color: var(--marca-texto); }
+}
+
+/* ---------- LINHA DE COMMIT / BRANCH ---------- */
+.commit {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-top: 1px solid var(--borda);
+}
+.commit:first-of-type { border-top: 0; }
+.commit__sha {
+    font-family: var(--mono); font-size: 11.5px; color: var(--tinta-2);
+    flex: 0 0 auto; background: var(--superficie-2); padding: 1px 8px; border-radius: var(--pilula);
+}
+.commit__meio { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.commit__assunto { font-weight: 600; font-size: 13.5px; }
+.commit__autor { font-size: 12px; color: var(--tinta-3); }
+.commit__tag {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    background: var(--superficie-2); color: var(--tinta-2); padding: 2px 9px; border-radius: var(--pilula);
+}
+.commit__tag--servidor { background: var(--servicos); color: var(--branco); }
+.commit__tag--local    { background: var(--subsea);   color: var(--branco); }
+.commit__assunto--link {
+    appearance: none; border: 0; background: none; padding: 0;
+    font: inherit; font-weight: 600; color: inherit; cursor: pointer; text-align: left;
+}
+.commit__assunto--link:hover { color: var(--subsea); text-decoration: underline; }
+
+/* O HISTORICO E UMA LINHA: cada versao salva, uma estacao. O trilho de cada
+   linha encosta no da seguinte; a primeira e a ultima cortam no meio. */
+.bloco--linha .commit { padding-left: 34px; border-top: 0; }
+.bloco--linha .commit::before {
+    content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 5px;
+    background: var(--trilho); opacity: .85;
+}
+.bloco--linha .commit:first-of-type::before { top: 50%; }
+.bloco--linha .commit:last-of-type::before { bottom: 50%; }
+.bloco--linha .commit:only-of-type::before { display: none; }
+.bloco--linha .commit::after {
+    content: ''; position: absolute; left: 3px; top: 50%; width: 19px; height: 19px; margin-top: -9.5px;
+    border-radius: 50%; background: var(--fundo); border: 4px solid var(--trilho);
+}
+.bloco--linha .commit:first-of-type::after { background: var(--servicos); border-color: var(--servicos); box-shadow: 0 0 0 4px rgba(11, 134, 29, .2); }
+
+/* ---------- ERRO COM O ORIGINAL DO GIT ---------- */
+.erro-host { margin-bottom: 14px; }
+.erro-cx {
+    background: var(--alarme-fundo); border-left: 4px solid var(--vermelho);
+    border-radius: var(--raio-p); padding: 12px 14px;
+}
+.erro-cx__msg { margin: 0 0 6px; color: var(--alarme-texto); font-size: 13.5px; font-weight: 600; }
+.erro-cx summary { cursor: pointer; font-size: 12.5px; color: var(--tinta-2); }
+.erro-cx__bruto {
+    margin: 8px 0 0; padding: 10px 12px; background: #101010; color: #E8E8E8;
+    border-radius: var(--raio-p); font-family: var(--mono);
+    font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+    max-height: 260px; overflow: auto;
+}
+
+/* ---------- O DIFF E O VISOR ---------- */
+.arquivo__nome--link {
+    appearance: none; border: 0; background: none; padding: 0;
+    color: inherit; cursor: pointer; text-align: left;
+}
+.arquivo__nome--link:hover { color: var(--subsea); text-decoration: underline; }
+
+.visor { margin: 6px 0 12px 26px; }
+.visor__diff, .visor__codigo {
+    margin: 0; padding: 12px 14px; background: #101010; border-radius: var(--raio-p);
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+    max-height: 420px; overflow: auto; color: #D8D8D8;
+    white-space: pre; tab-size: 4;
+}
+/* Verde e vermelho aqui sao a convencao universal de diff, nao a paleta:
+   troca-las deixaria bonito e ilegivel para quem ja leu um diff na vida. */
+.d { display: block; }
+.d--mais   { color: #7EE787; background: rgba(46,160,67,.16); }
+.d--menos  { color: #FF9492; background: rgba(248,81,73,.16); }
+.d--trecho { color: #79C0FF; }
+.d--cab    { color: #8B949E; }
+.d__sinal { display: inline-block; width: 1.2em; color: #6E7681; user-select: none; }
+.d--mais  .d__sinal { color: #7EE787; }
+.d--menos .d__sinal { color: #FF9492; }
+
+/* ---------- ARVORE DE ARQUIVOS ---------- */
+.arvore__busca { max-width: 380px; margin-bottom: 10px; }
+.arvore { max-height: 620px; overflow: auto; }
+.arv__linha { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 6px; }
+.arv__linha:hover { background: var(--superficie-3); }
+.arv__botao {
+    appearance: none; border: 0; background: none; padding: 2px 0;
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+    cursor: pointer; text-align: left; font-family: inherit; color: inherit;
+}
+.arv__seta { flex: 0 0 12px; font-size: 10px; color: var(--tinta-3); line-height: 1; }
+.arv__pasta { font-weight: 600; font-size: 13px; color: var(--tinta); }
+.arv__arquivo { font-family: var(--mono); font-size: 12.5px; color: var(--tinta-2); word-break: break-all; }
+.arv__botao:hover .arv__arquivo { color: var(--subsea); text-decoration: underline; }
+.arv__botao:hover .arv__pasta { color: var(--subsea); }
+.arv__conta {
+    flex: 0 0 auto; font-size: 11px; color: var(--tinta-2);
+    background: var(--superficie-2); border-radius: var(--pilula); padding: 1px 9px;
+}
+.arv__bytes { flex: 0 0 68px; text-align: right; font-size: 11.5px; color: var(--tinta-3); }
+.arv__nota { font-size: 12px; color: var(--tinta-3); margin-left: 8px; flex: 1 1 auto; min-width: 0; }
+button.arv__botao--link { color: var(--subsea); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+/* O visor abre embaixo da linha e ignora o recuo da arvore. */
+.arv__linha + .visor { margin-left: 0; }
+
+/* ---------- PROCURAR PASTA ---------- */
+.procurar {
+    margin-top: 14px; max-width: 760px;
+    background: var(--superficie); border: 1px solid var(--borda);
+    border-radius: var(--raio); overflow: hidden; box-shadow: var(--sombra);
+}
+.procurar__topo {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--borda); background: var(--superficie-3);
+}
+.procurar__caminho { font-family: var(--mono); font-size: 12px; color: var(--tinta-2); word-break: break-all; }
+.procurar__lista { max-height: 320px; overflow: auto; padding: 6px 0; }
+.procurar__item {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    appearance: none; border: 0; background: none; cursor: pointer;
+    padding: 7px 15px; font-family: inherit; font-size: 13px; color: var(--tinta); text-align: left;
+}
+.procurar__item:hover { background: var(--superficie-3); }
+.procurar__ic { color: var(--tinta-3); font-size: 10px; }
+.procurar__nome { flex: 1; word-break: break-all; }
+.procurar__tag {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    background: var(--servicos); color: var(--branco); padding: 2px 9px; border-radius: var(--pilula);
+}
+.procurar__rodape {
+    display: flex; gap: 8px; padding: 12px 14px;
+    border-top: 1px solid var(--borda); background: var(--superficie-3);
+}
+
+/* ---------- BOAS-VINDAS (identidade) ---------- */
+.boas-vindas { margin-bottom: 18px; }
+.boas-vindas__linha { display: flex; align-items: center; width: 140px; margin-bottom: 14px; }
+.boas-vindas__linha i { width: 18px; height: 18px; border-radius: 50%; border: 4px solid var(--trilho); background: var(--fundo); flex: 0 0 auto; }
+.boas-vindas__linha i + i { margin-left: 43px; position: relative; }
+.boas-vindas__linha i + i::before { content: ''; position: absolute; right: 14px; top: 3px; width: 47px; height: 4px; background: var(--trilho); }
+.boas-vindas__linha i:first-child { background: var(--servicos); border-color: var(--servicos); }
+
+/* ============================================================================
+   REALCE DE SINTAXE - cores do VSCode Dark+
+   As que a equipe ve o dia inteiro no editor: quem abre o visor reconhece o
+   que esta lendo sem reaprender o significado das cores.
+   ========================================================================== */
+.r-com { color: #6A9955; font-style: italic; }
+.r-txt { color: #CE9178; }
+.r-cha { color: #569CD6; }
+.r-fun { color: #DCDCAA; }
+.r-num { color: #B5CEA8; }
+.r-tip { color: #4EC9B0; }
+.r-var { color: #9CDCFE; }
+.r-tag { color: #569CD6; }
+.r-atr { color: #9CDCFE; }
+.r-sel { color: #D7BA7D; }
+.r-ar  { color: #C586C0; }
+.r-ftl { color: #C586C0; }
+.r-tit { color: #569CD6; font-weight: 700; }
+
+/* ---------- CODIGO COM NUMERO DE LINHA ---------- */
+.codigo {
+    display: flex; background: #1E1E1E; border-radius: var(--raio-p);
+    max-height: 520px; overflow: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: var(--mono);
+}
+.codigo__nums {
+    flex: 0 0 auto; padding: 11px 10px 11px 13px; text-align: right;
+    color: #6E7681; background: #1E1E1E; user-select: none;
+    white-space: pre; position: sticky; left: 0; border-right: 1px solid #2B2B2B;
+}
+.codigo__texto {
+    flex: 1; margin: 0; padding: 11px 14px; color: #D4D4D4;
+    white-space: pre; tab-size: 4; -moz-tab-size: 4;
+    font-family: inherit; font-size: inherit; line-height: inherit;
+}
+.codigo__corte {
+    background: #252526; color: #9DA5B4; font-size: 12px;
+    padding: 7px 13px; border-radius: 0 0 var(--raio-p) var(--raio-p);
+}
+
+/* ---------- TELAS ESTREITAS ---------- */
+@media (max-width: 1180px) { .marca__lema { display: none; } }
+@media (max-width: 1100px) { .repo__commit { display: none; } }
+@media (max-width: 860px) {
+    .repo__quando { display: none; }
+    .eu__nome { display: none; }
+}
+@media (max-width: 640px) {
+    .topo { height: auto; flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
+    .topo__nav { order: 3; width: 100%; justify-content: center; }
+    .conteudo { padding: 18px 16px 50px; }
+    .linha-metro { padding-left: 34px; }
+    .linha-metro::before { left: 11px; }
+    .repo::before { left: -33px; }
+    .repo { flex-wrap: wrap; gap: 6px; }
+    .repo__estado { flex: 0 0 auto; justify-content: flex-start; text-align: left; }
+    .arv__bytes, .arv__conta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .repo, .btn { transition: none; }
+    .repo:hover { transform: none; }
+}
