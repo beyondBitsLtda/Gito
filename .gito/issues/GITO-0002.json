@@ -1,0 +1,23 @@
+{
+  "id": "GITO-0002",
+  "titulo": "Painel unificado com gestão de Issues",
+  "descricao": "Sinto falta aqui de dois recuros: Um painel para ver todas as Issues de todos os repositorios, com sinalização por status e pro data:\n\n- Uma visão Kanban das issues por repositório:\n- Uma visão de agenda tipo google agenda com todas as issues programadas (além de uma visçao por repositório).",
+  "tipo": "melhoria",
+  "prioridade": "baixa",
+  "status": "aberta",
+  "responsavel": "Brayan Rodrigues",
+  "prazo": "2026-10-09",
+  "versaoAlvo": "",
+  "criadaEm": "2026-09-27T05:33:29.502Z",
+  "criadaPor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+  "atualizadaEm": "2026-09-27T05:33:29.502Z",
+  "comentarios": [],
+  "evidencias": [],
+  "historico": [
+    {
+      "quando": "2026-09-27T05:33:29.502Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "issue criada"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "GITO-0001",
+  "titulo": "Revisão visual no modo escuro",
+  "descricao": "No modo escuro alguns cmapos lista aqui da Issues ficma sem contraste com a cor da lista em branco e a escrita em um tom mais claro.",
+  "tipo": "bug",
+  "prioridade": "baixa",
+  "status": "aberta",
+  "responsavel": "Brayan Rodrigues",
+  "prazo": "2026-10-09",
+  "versaoAlvo": "0.1.0",
+  "criadaEm": "2026-09-27T05:31:19.352Z",
+  "criadaPor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+  "atualizadaEm": "2026-09-27T05:31:26.672Z",
+  "comentarios": [],
+  "evidencias": [],
+  "historico": [
+    {
+      "quando": "2026-09-27T05:31:19.352Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "issue criada"
+    },
+    {
+      "quando": "2026-09-27T05:31:26.672Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "tipo: melhoria → bug"
+    }
+  ]
+}
