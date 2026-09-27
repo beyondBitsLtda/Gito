@@ -12,6 +12,17 @@
 </head>
 <body>
 
+<!-- ================= ABERTURA =================
+     A primeira coisa pintada: o logo sobre o escuro enquanto o app lê os
+     repositórios. Some sozinha quando a lista chega (mínimo de 1,4 s, para
+     não piscar; máximo de 8 s, para nunca prender ninguém). Clique pula. -->
+<div class="abertura" data-abertura role="status" aria-live="polite" aria-label="Abrindo o Gito">
+    <div class="abertura__halo" aria-hidden="true"></div>
+    <img class="abertura__logo" src="/logo.png" alt="Gito">
+    <div class="abertura__linha" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="abertura__texto" data-abertura-texto>abrindo seus repositórios…</p>
+</div>
+
 <!-- A faixa das linhas: quatro cores, quatro estados do app. Não é enfeite -
      é a legenda que a lista de repositórios usa logo abaixo. -->
 <div class="faixa" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -24,6 +35,7 @@
     </div>
     <nav class="topo__nav" aria-label="Telas">
         <button type="button" class="nav__item nav__item--ativo" data-tela="repos">Meus repositórios</button>
+        <button type="button" class="nav__item" data-tela="painel">Painel</button>
         <button type="button" class="nav__item" data-tela="pastas">Minhas pastas</button>
     </nav>
     <div class="topo__fim">
@@ -95,6 +107,32 @@
         <div data-repo-corpo></div>
     </section>
 
+    <!-- ================= PAINEL DAS APLICAÇÕES =================
+         Cada aplicação com gito.json vira uma linha: a estação principal é a
+         versão publicada na main; as outras, a versão de cada branch. -->
+    <section class="tela" data-tela-id="painel" hidden>
+        <div class="cabecalho">
+            <div>
+                <h1 class="titulo">Painel das aplicações</h1>
+                <p class="ajuda" data-painel-resumo>A versão publicada na main e a de cada branch, a ficha técnica e as issues de cada aplicação que tem <code>gito.json</code>.</p>
+            </div>
+            <button type="button" class="btn" data-acao="painel-atualizar">↻ Atualizar</button>
+        </div>
+        <div data-painel-lista></div>
+    </section>
+
+    <!-- ================= UMA APLICAÇÃO ================= -->
+    <section class="tela" data-tela-id="app" hidden>
+        <div class="cabecalho">
+            <div>
+                <button type="button" class="voltar" data-acao="painel-voltar">&larr; Painel</button>
+                <h1 class="titulo" data-app-nome></h1>
+                <p class="ajuda" data-app-info></p>
+            </div>
+        </div>
+        <div data-app-corpo></div>
+    </section>
+
     <!-- ================= PASTAS ================= -->
     <section class="tela" data-tela-id="pastas" hidden>
         <h1 class="titulo">Minhas pastas</h1>
@@ -141,5 +179,6 @@
      na primeira pintura. -->
 <script src="/realce.js"></script>
 <script src="/app.js"></script>
+<script src="/painel.js"></script>
 </body>
 </html>

@@ -33,6 +33,21 @@
 
        Quando a conexão cai, a faixa abaixo fica FIXA na tela (não some sozinha
        como os outros recados) e diz o que fazer. */
+    /* O servidor aberto ANTES de uma atualizacao continua com o codigo velho,
+       enquanto a tela ja e a nova. A faixa fica ate reabrir. Servidor antigo
+       demais para ter esta rota tambem e "desatualizado". */
+    function conferirVersao() {
+        return fetch('/api/versao', { headers: { 'X-Gito-Token': TOKEN } }).then(function (r) {
+            return r.json().then(function (j) {
+                var velho = (j && j.ok && j.dados && j.dados.desatualizado) || (j && j.codigo === 'ROTA');
+                if (!velho || $('.faixa-versao')) return;
+                var f = criar('div', 'faixa-versao',
+                    'O Gito foi atualizado depois de aberto. Feche a janela do Gito e abra de novo pelo gito.cmd: até lá, as novidades (como o Painel) não funcionam.');
+                document.body.insertBefore(f, document.body.firstChild);
+            });
+        }).catch(function () { /* sem resposta: o aviso de app encerrado cuida */ });
+    }
+
     function appEncerrado() {
         var el = $('[data-recado]');
         el.textContent = 'O Gito foi encerrado — a janela preta foi fechada. ' +
@@ -1837,6 +1852,7 @@
                 mostrarTela(t);
                 if (t === 'repos') carregarRepos();
                 if (t === 'pastas') carregarPastas();
+                if (t === 'painel' && window.gitoPainel) { conferirVersao(); window.gitoPainel.abrir(); }
             };
         });
         $('[data-acao="atualizar"]').onclick = carregarRepos;
@@ -1851,6 +1867,7 @@
             $('[data-procurar]').hidden = true;
         };
 
+        conferirVersao();
         api('/api/estado').then(function (e) {
             $('[data-arquivo-config]').textContent = 'Guardado em ' + e.arquivoConfig;
 
@@ -1867,8 +1884,38 @@
         }).catch(function (err) {
             recado('Não consegui falar com o app: ' + err.message +
                    ' — reabra pelo endereço que apareceu no console.', true);
-        });
+        }).then(fecharAbertura, fecharAbertura);
+        /* Rede lenta ou pasta enorme: a abertura nunca prende a tela. */
+        setTimeout(fecharAbertura, ABERTURA_MAX_MS);
     }
+
+    /* ======================================================== A ABERTURA
+       Some quando a primeira carga termina, mas nunca antes de 1,4 s - uma
+       tela que aparece e some num piscar parece defeito, não boas-vindas. */
+    var ABERTURA_INICIO = Date.now(), ABERTURA_MIN_MS = 1400, ABERTURA_MAX_MS = 8000;
+    function fecharAbertura() {
+        var el = $('[data-abertura]');
+        if (!el || el.classList.contains('abertura--saindo')) return;
+        var falta = Math.max(0, ABERTURA_MIN_MS - (Date.now() - ABERTURA_INICIO));
+        setTimeout(function () {
+            el.classList.add('abertura--saindo');
+            setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
+        }, falta);
+    }
+    (function () {
+        var el = $('[data-abertura]');
+        if (el) el.addEventListener('click', function () { ABERTURA_MIN_MS = 0; fecharAbertura(); });
+        /* Sem logo.png na pasta, some a imagem (e nao um icone de imagem quebrada). */
+        var logo = el && el.querySelector('.abertura__logo');
+        if (logo) logo.addEventListener('error', function () { logo.style.display = 'none'; });
+    }());
+
+    /* O painel das aplicacoes mora em painel.js e usa estes utilitarios. */
+    window.gitoUI = {
+        api: api, criar: criar, recado: recado, erroDetalhado: erroDetalhado, mostrarTela: mostrarTela,
+        desde: desde, $: $, $$: $$, token: function () { return TOKEN; },
+        abrirRepo: function (caminho, nome) { abrirRepo({ caminho: caminho, nome: nome, versionado: true }); }
+    };
 
     iniciar();
 }());
