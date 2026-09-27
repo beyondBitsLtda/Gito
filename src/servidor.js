@@ -477,6 +477,21 @@ function criar(token) {
             });
         },
 
+        /* As issues de TODAS as aplicações das pastas cadastradas: a Lista, o
+           Kanban e a Agenda do painel unificado (GITO-0002). Só leitura: mudar
+           uma issue continua passando por POST /api/painel/issue. */
+        'GET /api/painel/issues-todas': function () {
+            var itens = repos.candidatos(config.ler().pastas).filter(function (r) { return r.versionado && !r.erro; });
+            var d = painel.issuesDeTodas(itens);
+            return git.identidade().then(function (id) {
+                var pessoas = {};
+                d.issues.forEach(function (i) { if (i.responsavel) pessoas[i.responsavel] = 1; });
+                if (id.nome) pessoas[id.nome] = 1;
+                return Object.assign(d, { pessoas: Object.keys(pessoas).sort(), eu: id.nome || '',
+                                          tipos: painel.TIPOS_ISSUE, prioridades: painel.PRIORIDADES, situacoes: painel.SITUACOES });
+            });
+        },
+
         'POST /api/painel/issue': function (req, url, corpo) {
             var repo = caminhoValidado(corpo.p);
             var dir = painel.pastaDaApp(repo, corpo.sub);

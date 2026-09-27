@@ -10,6 +10,8 @@
      5. criar a ficha num repositorio sem: so acrescenta, nunca sobrescreve
      6. "esta no ar?": http (200, 404, 500, HEAD recusado) e tcp
      7. as rotas: o painel lista, o arquivo sai com sandbox, a cerca vale
+     8. o painel unificado: as issues de todas as aplicacoes, mudar a
+        situacao pelo kanban e o "hoje" no relogio local
 
    Rodar:  node teste/teste-painel.js
 */
@@ -241,6 +243,28 @@ fs.mkdirSync(R, { recursive: true });
     var iss = await pedir('/api/painel/issues?p=' + encodeURIComponent(R) + '&sub=');
     conferir(iss.j && iss.j.dados.issues.length === 3 && iss.j.dados.pessoas.indexOf('Bruno') >= 0,
         'a lista traz as issues e as sugestões de responsável');
+
+    /* ====================================================================== */
+    console.log('\n--- 8. o painel unificado (GITO-0002) ---');
+    var todas = await pedir('/api/painel/issues-todas');
+    var dt = todas.j && todas.j.dados;
+    var appT = dt && dt.aplicacoes.filter(function (a) { return a.repoNome === 'app-teste' && a.sub === ''; })[0];
+    conferir(appT && appT.codigo === 'APT' && appT.total === 3, 'traz cada aplicação das pastas com a sigla e o total de issues', JSON.stringify(dt && dt.aplicacoes));
+    var daApp = dt ? dt.issues.filter(function (i) { return appT && i.app === appT.chave; }) : [];
+    conferir(daApp.length === 3 && daApp.every(function (i) { return /^APT-\d{4}$/.test(i.id); }),
+        'as issues de todas vêm juntas, cada uma com a aplicação dela', JSON.stringify(daApp.map(function (i) { return i.id; })));
+    var a1 = daApp.filter(function (i) { return i.id === 'APT-0001'; })[0];
+    conferir(a1 && a1.descricao === undefined && a1.historico === undefined && typeof a1.comentarios === 'number' && a1.prazo === '2026-10-05',
+        'vai só o resumo que a lista, o kanban e a agenda mostram (prazo, contagens), sem descrição nem histórico', JSON.stringify(a1));
+    conferir(dt && /^\d{4}-\d{2}-\d{2}$/.test(dt.hoje) && dt.tipos.indexOf('bug') >= 0 && dt.situacoes.indexOf('em-revisao') >= 0,
+        'e o que as visões precisam: o dia de hoje, os tipos e as situações');
+    var movida = await pedir('/api/painel/issue', 'POST', { p: R, sub: '', id: 'APT-0003', dados: { status: 'em-revisao' } });
+    var m3 = movida.j && movida.j.dados;
+    conferir(m3 && m3.status === 'em-revisao' && m3.titulo === 'Pela rota' && m3.tipo === 'tarefa' &&
+             /situação: aberta → em-revisao/.test(m3.historico[m3.historico.length - 1].mudanca),
+        'arrastar no kanban (só a situação) muda a situação, mantém o resto e entra no histórico', JSON.stringify(m3 && m3.historico));
+    conferir(painel.hojeLocal(new Date(2026, 8, 26, 23, 30)) === '2026-09-26' && painel.hojeLocal(new Date(2026, 0, 5, 0, 5)) === '2026-01-05',
+        'o "hoje" é o do relógio da pessoa: 23h30 ainda é o mesmo dia (em UTC já seria o seguinte)');
 
     app.close(); srvTeste.close();
     console.log('\n===== ' + (falhas ? falhas + ' FALHAS' : 'todos passaram') + ' =====');

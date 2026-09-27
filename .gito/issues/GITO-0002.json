@@ -4,20 +4,53 @@
   "descricao": "Sinto falta aqui de dois recuros: Um painel para ver todas as Issues de todos os repositorios, com sinalização por status e pro data:\n\n- Uma visão Kanban das issues por repositório:\n- Uma visão de agenda tipo google agenda com todas as issues programadas (além de uma visçao por repositório).",
   "tipo": "melhoria",
   "prioridade": "baixa",
-  "status": "aberta",
+  "status": "concluida",
   "responsavel": "Brayan Rodrigues",
   "prazo": "2026-10-09",
-  "versaoAlvo": "",
+  "versaoAlvo": "1.1.0",
   "criadaEm": "2026-09-27T05:33:29.502Z",
   "criadaPor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
-  "atualizadaEm": "2026-09-27T05:33:29.502Z",
-  "comentarios": [],
+  "atualizadaEm": "2026-09-27T06:13:41.585Z",
+  "comentarios": [
+    {
+      "quando": "2026-09-27T05:55:09.483Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "texto": "Vou implementar no Painel uma aba Issues com as issues de todos os repositórios (sinalização por situação e prazo) em três visões: Lista, Kanban (colunas por situação, mudar a situação arrastando) e Agenda (calendário do mês pelo prazo), todas com filtro por repositório. As visões Kanban e Agenda também entram na aba Issues de cada aplicação.",
+      "evidencias": []
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "texto": "Implementado na versão 1.1.0-issues-0-1-0.1 (branch Issues_0.1.0). No Painel, ao lado de Aplicações, a aba \"Issues de todas as aplicações\": as issues de todos os repositórios juntas, com contagem por situação, vencidas e as que vencem em 7 dias, e filtro por aplicação (a visão de um repositório só), tipo, responsável e busca. Três visões: Lista; Kanban (uma coluna por situação, arrastar ou Shift + ← → muda a situação e registra no histórico); Agenda (calendário do mês pelo prazo, hoje marcado, vencidas em vermelho, aviso das vencidas de meses anteriores e lista das sem prazo). Kanban e Agenda também na aba Issues de cada aplicação. De quebra: o hoje passa a ser o do relógio local (depois das 21h o prazo do dia aparecia vencido). Testes: teste/teste-painel.js, seção 8.",
+      "evidencias": []
+    }
+  ],
   "evidencias": [],
   "historico": [
     {
       "quando": "2026-09-27T05:33:29.502Z",
       "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
       "mudanca": "issue criada"
+    },
+    {
+      "quando": "2026-09-27T05:55:09.483Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "situação: aberta → em-andamento"
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "situação: em-andamento → em-revisao"
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "versão alvo: — → 1.1.0"
+    },
+    {
+      "quando": "2026-09-27T06:13:41.585Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "situação: em-revisao → concluida"
     }
   ]
 }

@@ -102,6 +102,10 @@ A aba **Painel** mostra cada aplicação que tem um **`gito.json`**. É ele que 
   - **Registro:** comentários, evidências (imagem, PDF, planilha, até 8 MB) e histórico de cada mudança.
   - **Ordem:** as vencidas e as críticas aparecem primeiro.
   - **Onde ficam:** em `.gito/issues/` dentro do repositório, versionadas com o código. Depois de criar ou mudar, salve e envie para a equipe ver.
+- **Issues de todas as aplicações:** no topo do Painel, ao lado de "Aplicações". Junta as issues de todos os repositórios, com a contagem por situação, as vencidas e as que vencem em 7 dias, e filtro por aplicação, tipo e responsável. Três visões, que também existem na aba Issues de cada aplicação:
+  - **Lista:** na ordem de trabalho (vencidas e críticas primeiro). Clicar abre a issue na aplicação.
+  - **Kanban:** uma coluna por situação. Arrastar o cartão para outra coluna (ou Shift + ← →) muda a situação, com o seu nome no histórico da issue.
+  - **Agenda:** o calendário do mês pelo prazo, com o dia de hoje marcado, as vencidas em vermelho e as sem prazo listadas abaixo.
 
 ### Como pôr um repositório no painel
 

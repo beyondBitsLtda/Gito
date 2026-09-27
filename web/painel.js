@@ -28,9 +28,19 @@
                      seguranca: 'segurança', infraestrutura: 'infraestrutura', quebra: 'quebra de compatibilidade' };
 
     var estado = { lista: null, app: null, aba: 'versoes', issues: null, filtro: { situacao: 'abertas', busca: '', tipo: '', resp: '' },
-                   aberta: null, novaAberta: false, servicos: {}, historicoDe: 'publicada' };
+                   aberta: null, novaAberta: false, servicos: {}, historicoDe: 'publicada',
+                   /* o painel unificado (GITO-0002) */
+                   visaoPainel: 'aplicacoes', geral: null, visaoGeral: 'lista', visaoApp: 'lista',
+                   filtroGeral: { situacao: 'abertas', busca: '', tipo: '', resp: '', app: '' },
+                   mes: null, dia: null };
 
-    function hoje() { return new Date().toISOString().slice(0, 10); }
+    /* O dia no relogio da pessoa, e nao em UTC: com toISOString, depois das
+       21h ja era "amanha" e o prazo de hoje aparecia como vencido. */
+    function isoDe(d) {
+        function dois(n) { return (n < 10 ? '0' : '') + n; }
+        return d.getFullYear() + '-' + dois(d.getMonth() + 1) + '-' + dois(d.getDate());
+    }
+    function hoje() { return isoDe(new Date()); }
     function qs(o) { return Object.keys(o).map(function (k) { return k + '=' + encodeURIComponent(o[k] == null ? '' : o[k]); }).join('&'); }
     function dataBr(iso) {
         if (!iso) return '';
@@ -65,15 +75,47 @@
     function nomeDaApp(a) { return a.ficha && a.ficha.dados ? a.ficha.dados.aplicacao.nome : a.repoNome; }
 
     /* ======================================================== A LISTA */
+    /* Duas visoes no painel: os cartoes das aplicacoes e as issues de todas
+       elas juntas (lista, kanban e agenda). */
     function abrir() {
         U.mostrarTela('painel');
-        var host = $('[data-painel-lista]');
+        pintarVisoesDoPainel();
+        return estado.visaoPainel === 'issues' ? abrirIssuesGerais() : abrirAplicacoes();
+    }
+
+    function pintarVisoesDoPainel() {
+        var host = $('[data-painel-visoes]');
+        host.innerHTML = '';
+        var nav = criar('div', 'subnav painel-visoes');
+        var abertas = estado.geral ? estado.geral.issues.filter(function (i) { return !fechada(i); }).length
+            : estado.lista ? estado.lista.aplicacoes.reduce(function (s, a) { return s + (a.issues ? a.issues.abertas : 0); }, 0) : 0;
+        [['aplicacoes', 'Aplicações'], ['issues', 'Issues de todas as aplicações' + (abertas ? ' (' + abertas + ')' : '')]].forEach(function (p) {
+            var b = criar('button', 'subnav__item' + (estado.visaoPainel === p[0] ? ' subnav__item--ativo' : ''), p[1]);
+            b.type = 'button';
+            b.onclick = function () { if (estado.visaoPainel !== p[0]) { estado.visaoPainel = p[0]; abrir(); } };
+            nav.appendChild(b);
+        });
+        host.appendChild(nav);
+    }
+
+    /* Cada abertura do painel ganha um numero; a resposta que chegar depois
+       de outra abertura e descartada. Sem isso, clicar em "Issues" enquanto
+       as aplicacoes ainda carregavam desenhava os cartoes POR CIMA das issues
+       (a lista de aplicacoes, mais lenta, chegava por ultimo). */
+    function novaAbertura() { estado.abertura = (estado.abertura || 0) + 1; return estado.abertura; }
+    function aindaVale(n) { return n === estado.abertura; }
+
+    function abrirAplicacoes() {
+        var host = $('[data-painel-lista]'), n = novaAbertura();
         host.innerHTML = '';
         host.appendChild(criar('p', 'ajuda', 'Lendo as aplicações e as versões de cada branch…'));
         return api('/api/painel').then(function (d) {
+            if (!aindaVale(n)) return;
             estado.lista = d;
+            estado.geral = null;        /* a contagem do seletor passa a vir desta lista, mais nova */
+            pintarVisoesDoPainel();
             pintarLista();
-        }).catch(function (e) { host.innerHTML = ''; U.erroDetalhado(e, host); });
+        }).catch(function (e) { if (aindaVale(n)) { host.innerHTML = ''; U.erroDetalhado(e, host); } });
     }
 
     function pintarLista() {
@@ -223,14 +265,17 @@
     }
 
     /* ======================================================== UMA APLICACAO */
-    function abrirApp(repo, sub, aba) {
+    /* issueId: vindo do painel unificado, abre a aba Issues com ela aberta
+       (e sem filtro, para ela aparecer qualquer que seja a situacao). */
+    function abrirApp(repo, sub, aba, issueId) {
         U.mostrarTela('app');
         U.$$('.nav__item').forEach(function (b) { b.classList.toggle('nav__item--ativo', b.getAttribute('data-tela') === 'painel'); });
         $('[data-app-nome]').textContent = 'Lendo…';
         $('[data-app-info]').textContent = '';
         $('[data-app-corpo]').innerHTML = '';
         estado.aba = aba || estado.aba || 'versoes';
-        estado.aberta = null; estado.novaAberta = false; estado.servicos = {};
+        estado.aberta = issueId || null; estado.novaAberta = false; estado.servicos = {};
+        if (issueId) { estado.filtro = { situacao: 'todas', busca: '', tipo: '', resp: '' }; estado.visaoApp = 'lista'; }
         return api('/api/painel/app?' + qs({ p: repo, sub: sub })).then(function (d) {
             estado.app = d;
             pintarApp();
@@ -565,25 +610,42 @@
         }).catch(function (e) { host.innerHTML = ''; U.erroDetalhado(e, host); });
     }
 
+    var ORDEM_SITUACAO = ['aberta', 'em-andamento', 'em-revisao', 'concluida', 'cancelada'];
+    function fechada(i) { return i.status === 'concluida' || i.status === 'cancelada'; }
+    function vencida(i) { return !fechada(i) && !!i.prazo && i.prazo < hoje(); }
+    /* Prazo nos proximos 7 dias (hoje incluido), ainda nao vencido. */
+    function naSemana(i) {
+        if (fechada(i) || !i.prazo || i.prazo < hoje()) return false;
+        return (Date.parse(i.prazo) - Date.parse(hoje())) / 86400000 <= 7;
+    }
+    /* Na aba da aplicacao a issue vem inteira (listas); no painel unificado,
+       so as contagens. */
+    function qtd(x) { return Array.isArray(x) ? x.length : (x || 0); }
+
     function contaSituacoes(lista) {
-        var c = { abertas: 0, vencidas: 0, todas: lista.length };
+        var c = { abertas: 0, vencidas: 0, semana: 0, todas: lista.length };
         Object.keys(ROT_SITUACAO).forEach(function (k) { c[k] = 0; });
         lista.forEach(function (i) {
             c[i.status] = (c[i.status] || 0) + 1;
-            if (i.status !== 'concluida' && i.status !== 'cancelada') {
+            if (!fechada(i)) {
                 c.abertas++;
-                if (i.prazo && i.prazo < hoje()) c.vencidas++;
+                if (vencida(i)) c.vencidas++;
+                if (naSemana(i)) c.semana++;
             }
         });
         return c;
     }
 
-    function passaFiltro(i) {
-        var f = estado.filtro;
-        var fechada = i.status === 'concluida' || i.status === 'cancelada';
-        if (f.situacao === 'abertas' && fechada) return false;
-        if (f.situacao === 'vencidas' && (fechada || !i.prazo || i.prazo >= hoje())) return false;
-        if (ROT_SITUACAO[f.situacao] && i.status !== f.situacao) return false;
+    /* semSituacao: o Kanban ja separa por situacao - la o filtro de situacao
+       nao se aplica, so tipo, responsavel, aplicacao e busca. */
+    function passaFiltroCom(f, i, semSituacao) {
+        if (!semSituacao) {
+            if (f.situacao === 'abertas' && fechada(i)) return false;
+            if (f.situacao === 'vencidas' && !vencida(i)) return false;
+            if (f.situacao === 'semana' && !naSemana(i)) return false;
+            if (ROT_SITUACAO[f.situacao] && i.status !== f.situacao) return false;
+        }
+        if (f.app && i.app !== f.app) return false;
         if (f.tipo && i.tipo !== f.tipo) return false;
         if (f.resp && i.responsavel !== f.resp) return false;
         if (f.busca) {
@@ -591,6 +653,51 @@
             if (t.indexOf(f.busca.toLowerCase()) < 0) return false;
         }
         return true;
+    }
+    function passaFiltro(i) { return passaFiltroCom(estado.filtro, i); }
+
+    /* A ordem de trabalho: vencidas, depois pela situacao, pela prioridade,
+       pelo prazo mais perto - e a mais nova por ultimo criterio. */
+    var PESO_SIT = { 'em-andamento': 0, 'aberta': 1, 'em-revisao': 2, 'concluida': 3, 'cancelada': 4 };
+    var PESO_PRI = { critica: 0, alta: 1, media: 2, baixa: 3 };
+    function ordemDeTrabalho(a, b) {
+        return (vencida(b) ? 1 : 0) - (vencida(a) ? 1 : 0) ||
+               ((PESO_SIT[a.status] == null ? 1 : PESO_SIT[a.status]) - (PESO_SIT[b.status] == null ? 1 : PESO_SIT[b.status])) ||
+               ((PESO_PRI[a.prioridade] == null ? 2 : PESO_PRI[a.prioridade]) - (PESO_PRI[b.prioridade] == null ? 2 : PESO_PRI[b.prioridade])) ||
+               String(a.prazo || '9999').localeCompare(String(b.prazo || '9999')) ||
+               String(b.id).localeCompare(String(a.id), 'pt-BR', { numeric: true });
+    }
+
+    /* A faixa de contagem, que tambem e o filtro de situacao. */
+    function faixaDeContagem(lista, filtro, aoMudar) {
+        var c = contaSituacoes(lista);
+        var faixa = criar('div', 'issues-contagem');
+        [['abertas', 'Abertas', c.abertas], ['vencidas', 'Vencidas', c.vencidas], ['semana', 'Vencem em 7 dias', c.semana],
+         ['aberta', 'Novas', c.aberta], ['em-andamento', 'Em andamento', c['em-andamento']],
+         ['em-revisao', 'Em revisão', c['em-revisao']], ['concluida', 'Concluídas', c.concluida], ['todas', 'Todas', c.todas]].forEach(function (p) {
+            var b = criar('button', 'contagem' + (filtro.situacao === p[0] ? ' contagem--ativa' : '') +
+                                    (p[0] === 'vencidas' && p[2] ? ' contagem--alarme' : '') + (p[0] === 'semana' && p[2] ? ' contagem--alerta' : ''));
+            b.type = 'button';
+            b.appendChild(criar('span', 'contagem__num', String(p[2] || 0)));
+            b.appendChild(criar('span', 'contagem__rot', p[1]));
+            b.onclick = function () { filtro.situacao = p[0]; aoMudar(); };
+            faixa.appendChild(b);
+        });
+        return faixa;
+    }
+
+    function seletorDeVisao(atual, aoMudar) {
+        var nav = criar('div', 'subnav subnav--mini visao-issues');
+        nav.setAttribute('role', 'group');
+        nav.setAttribute('aria-label', 'Como ver as issues');
+        [['lista', '☰ Lista'], ['kanban', '▥ Kanban'], ['agenda', '▦ Agenda']].forEach(function (p) {
+            var b = criar('button', 'subnav__item' + (atual === p[0] ? ' subnav__item--ativo' : ''), p[1]);
+            b.type = 'button';
+            b.setAttribute('aria-pressed', atual === p[0] ? 'true' : 'false');
+            b.onclick = function () { if (atual !== p[0]) aoMudar(p[0]); };
+            nav.appendChild(b);
+        });
+        return nav;
     }
 
     function desenharIssues(host) {
@@ -605,35 +712,46 @@
         host.appendChild(nota);
         (r.problemas || []).forEach(function (p) { host.appendChild(criar('div', 'aviso', '⚠ ' + p)); });
 
-        var c = contaSituacoes(r.issues);
-        var faixa = criar('div', 'issues-contagem');
-        [['abertas', 'Abertas', c.abertas], ['vencidas', 'Vencidas', c.vencidas], ['aberta', 'Novas', c.aberta], ['em-andamento', 'Em andamento', c['em-andamento']],
-         ['em-revisao', 'Em revisão', c['em-revisao']], ['concluida', 'Concluídas', c.concluida], ['todas', 'Todas', c.todas]].forEach(function (p) {
-            var b = criar('button', 'contagem' + (estado.filtro.situacao === p[0] ? ' contagem--ativa' : '') + (p[0] === 'vencidas' && p[2] ? ' contagem--alarme' : ''));
-            b.appendChild(criar('span', 'contagem__num', String(p[2] || 0)));
-            b.appendChild(criar('span', 'contagem__rot', p[1]));
-            b.onclick = function () { estado.filtro.situacao = p[0]; desenharIssues(host); };
-            faixa.appendChild(b);
-        });
-        host.appendChild(faixa);
+        /* No Kanban as colunas ja sao a situacao: a faixa de filtro sai. */
+        if (estado.visaoApp !== 'kanban') host.appendChild(faixaDeContagem(r.issues, estado.filtro, function () { desenharIssues(host); }));
 
         var barra = criar('div', 'issues-barra');
         var busca = criar('input'); busca.type = 'text'; busca.placeholder = 'Buscar por ID, título, descrição…'; busca.value = estado.filtro.busca;
-        busca.oninput = function () { estado.filtro.busca = busca.value; desenharLista(listaHost); };
+        busca.setAttribute('aria-label', 'Buscar issues');
+        busca.oninput = function () { estado.filtro.busca = busca.value; desenharVisao(); };
         barra.appendChild(busca);
         barra.appendChild(seletor([['', 'Todos os tipos']].concat(r.tipos.map(function (t) { return [t, ROT_TIPO[t]]; })), estado.filtro.tipo,
-            function (v) { estado.filtro.tipo = v; desenharLista(listaHost); }));
+            function (v) { estado.filtro.tipo = v; desenharVisao(); }));
         barra.appendChild(seletor([['', 'Todos os responsáveis']].concat(r.pessoas.map(function (p) { return [p, p]; })), estado.filtro.resp,
-            function (v) { estado.filtro.resp = v; desenharLista(listaHost); }));
+            function (v) { estado.filtro.resp = v; desenharVisao(); }));
+        barra.appendChild(seletorDeVisao(estado.visaoApp, function (v) { estado.visaoApp = v; desenharIssues(host); }));
         var nova = criar('button', 'btn btn--principal', '+ Nova issue');
         nova.onclick = function () { estado.novaAberta = !estado.novaAberta; desenharIssues(host); };
         barra.appendChild(nova);
         host.appendChild(barra);
 
         if (estado.novaAberta) host.appendChild(formIssue(null, host));
-        var listaHost = criar('div', 'issues-lista');
+        var listaHost = criar('div', estado.visaoApp === 'lista' ? 'issues-lista' : 'issues-visao');
         host.appendChild(listaHost);
-        desenharLista(listaHost);
+
+        /* Kanban e Agenda: clicar numa issue volta para a Lista com ela aberta. */
+        var ctx = {
+            mostrarApp: false,
+            appDe: function () { return d; },
+            aoAbrir: function (i) {
+                estado.visaoApp = 'lista'; estado.aberta = i.id;
+                if (!passaFiltro(i)) estado.filtro.situacao = 'todas';
+                desenharIssues(host);
+            },
+            recarregar: function () { return recarregarIssues(listaHost); },
+            redesenhar: function () { desenharVisao(); }
+        };
+        function desenharVisao() {
+            if (estado.visaoApp === 'kanban') return desenharKanban(listaHost, r.issues.filter(function (i) { return passaFiltroCom(estado.filtro, i, true); }), ctx);
+            if (estado.visaoApp === 'agenda') return desenharAgenda(listaHost, r.issues.filter(passaFiltro), ctx);
+            desenharLista(listaHost);
+        }
+        desenharVisao();
     }
 
     function seletor(opcoes, valor, aoMudar) {
@@ -646,18 +764,7 @@
 
     function desenharLista(host) {
         host.innerHTML = '';
-        var PESO_SIT = { 'em-andamento': 0, 'aberta': 1, 'em-revisao': 2, 'concluida': 3, 'cancelada': 4 };
-        var PESO_PRI = { critica: 0, alta: 1, media: 2, baixa: 3 };
-        function vencida(i) { return i.prazo && i.prazo < hoje() && PESO_SIT[i.status] < 3; }
-        /* Ordem de trabalho: vencidas, depois pela situacao, pela prioridade,
-           pelo prazo mais perto - e a mais nova por ultimo criterio. */
-        var lista = estado.issues.issues.filter(passaFiltro).sort(function (a, b) {
-            return (vencida(b) ? 1 : 0) - (vencida(a) ? 1 : 0) ||
-                   (PESO_SIT[a.status] - PESO_SIT[b.status]) ||
-                   ((PESO_PRI[a.prioridade] == null ? 2 : PESO_PRI[a.prioridade]) - (PESO_PRI[b.prioridade] == null ? 2 : PESO_PRI[b.prioridade])) ||
-                   String(a.prazo || '9999').localeCompare(String(b.prazo || '9999')) ||
-                   String(b.id).localeCompare(String(a.id), 'pt-BR', { numeric: true });
-        });
+        var lista = estado.issues.issues.filter(passaFiltro).sort(ordemDeTrabalho);
         if (!lista.length) {
             host.appendChild(criar('div', 'vazio', estado.issues.issues.length ? 'Nenhuma issue com esse filtro.' : 'Nenhuma issue ainda. Use "+ Nova issue" para registrar uma melhoria, um bug ou uma tarefa.'));
             return;
@@ -757,7 +864,8 @@
         var d = estado.app;
         return api('/api/painel/issues?' + qs({ p: d.repo, sub: d.sub })).then(function (r) {
             estado.issues = r;
-            var host = hostLista.closest ? (hostLista.closest('.issues-lista') ? hostLista.closest('.issues-lista').parentNode : hostLista) : hostLista;
+            var cont = hostLista.closest ? hostLista.closest('.issues-lista, .issues-visao') : null;
+            var host = cont ? cont.parentNode : hostLista;
             desenharIssues(host);
             api('/api/painel/app?' + qs({ p: d.repo, sub: d.sub })).then(function (novo) { estado.app.issues = novo.issues; }).catch(function () {});
         });
@@ -861,6 +969,330 @@
             fr.onerror = function () { falha(new Error('não consegui ler ' + arquivo.name)); };
             fr.readAsDataURL(arquivo);
         });
+    }
+
+    /* ======================================================== ISSUES DE TODAS AS APLICACOES
+       O painel unificado (GITO-0002): as issues de todos os repositorios numa
+       lista so, com tres visoes - Lista, Kanban e Agenda - e o filtro por
+       aplicacao, que da a mesma visao de um repositorio so. */
+    function abrirIssuesGerais() {
+        var host = $('[data-painel-lista]'), n = novaAbertura();
+        if (!estado.geral || !host.querySelector('.issues-visao')) {
+            host.innerHTML = '';
+            host.appendChild(criar('p', 'ajuda', 'Lendo as issues de todas as aplicações…'));
+        }
+        return api('/api/painel/issues-todas').then(function (d) {
+            if (!aindaVale(n)) return;
+            estado.geral = d;
+            estado.appsGerais = {};
+            d.aplicacoes.forEach(function (a) { estado.appsGerais[a.chave] = a; });
+            if (estado.filtroGeral.app && !estado.appsGerais[estado.filtroGeral.app]) estado.filtroGeral.app = '';
+            if (estado.filtroGeral.resp && d.pessoas.indexOf(estado.filtroGeral.resp) < 0) estado.filtroGeral.resp = '';
+            pintarVisoesDoPainel();
+            pintarIssuesGerais();
+        }).catch(function (e) { if (aindaVale(n)) { host.innerHTML = ''; U.erroDetalhado(e, host); } });
+    }
+
+    function pintarIssuesGerais() {
+        var d = estado.geral, f = estado.filtroGeral, host = $('[data-painel-lista]');
+        host.innerHTML = '';
+        var c = contaSituacoes(d.issues);
+        $('[data-painel-resumo]').textContent = d.aplicacoes.length
+            ? c.abertas + ' issue(s) aberta(s) em ' + d.aplicacoes.length + ' aplicação(ões)' +
+              (c.vencidas ? ' · ' + c.vencidas + ' vencida(s)' : '') + (c.semana ? ' · ' + c.semana + ' vencem em 7 dias' : '')
+            : 'Nenhuma aplicação com gito.json nas suas pastas ainda.';
+        if (!d.aplicacoes.length) { host.appendChild(comoAdotar()); return; }
+        (d.problemas || []).forEach(function (p) { host.appendChild(criar('div', 'aviso', '⚠ ' + p)); });
+
+        if (estado.visaoGeral !== 'kanban') host.appendChild(faixaDeContagem(d.issues, f, pintarIssuesGerais));
+
+        var barra = criar('div', 'issues-barra');
+        var busca = criar('input'); busca.type = 'text'; busca.placeholder = 'Buscar por ID, título, responsável…'; busca.value = f.busca;
+        busca.setAttribute('aria-label', 'Buscar issues');
+        busca.oninput = function () { f.busca = busca.value; desenhar(); };
+        barra.appendChild(busca);
+        var porApp = {};
+        d.issues.forEach(function (i) { if (!fechada(i)) porApp[i.app] = (porApp[i.app] || 0) + 1; });
+        barra.appendChild(seletor([['', 'Todas as aplicações']].concat(d.aplicacoes.map(function (a) {
+            return [a.chave, a.nome + ' · ' + a.codigo + (porApp[a.chave] ? ' (' + porApp[a.chave] + ')' : '')];
+        })), f.app, function (v) { f.app = v; pintarIssuesGerais(); }));
+        barra.appendChild(seletor([['', 'Todos os tipos']].concat(d.tipos.map(function (t) { return [t, ROT_TIPO[t]]; })), f.tipo,
+            function (v) { f.tipo = v; desenhar(); }));
+        barra.appendChild(seletor([['', 'Todos os responsáveis']].concat(d.pessoas.map(function (p) { return [p, p]; })), f.resp,
+            function (v) { f.resp = v; desenhar(); }));
+        barra.appendChild(seletorDeVisao(estado.visaoGeral, function (v) { estado.visaoGeral = v; pintarIssuesGerais(); }));
+        host.appendChild(barra);
+        host.appendChild(criar('p', 'ajuda issues-geral__nota', 'Clique numa issue para abri-la na aplicação. Para criar uma, abra a aplicação em "Aplicações". ' +
+            'As issues ficam em .gito/issues de cada repositório: depois de mudar, salve e envie para a equipe ver.'));
+
+        var alvo = criar('div', 'issues-visao');
+        host.appendChild(alvo);
+        var ctx = {
+            mostrarApp: !f.app,
+            appDe: function (i) { return estado.appsGerais[i.app]; },
+            aoAbrir: function (i) { var a = estado.appsGerais[i.app]; if (a) abrirApp(a.repo, a.sub, 'issues', i.id); },
+            recarregar: abrirIssuesGerais,
+            redesenhar: desenhar
+        };
+        function desenhar() {
+            if (estado.visaoGeral === 'kanban') return desenharKanban(alvo, d.issues.filter(function (i) { return passaFiltroCom(f, i, true); }), ctx);
+            var filtradas = d.issues.filter(function (i) { return passaFiltroCom(f, i); });
+            if (estado.visaoGeral === 'agenda') return desenharAgenda(alvo, filtradas, ctx);
+            desenharListaGeral(alvo, filtradas, ctx);
+        }
+        desenhar();
+    }
+
+    function desenharListaGeral(host, lista, ctx) {
+        host.innerHTML = '';
+        if (!lista.length) {
+            host.appendChild(criar('div', 'vazio', estado.geral.issues.length ? 'Nenhuma issue com esse filtro.' : 'Nenhuma issue registrada nas aplicações ainda.'));
+            return;
+        }
+        var ul = criar('div', 'issues-lista');
+        lista.slice().sort(ordemDeTrabalho).forEach(function (i) {
+            var a = ctx.appDe(i) || {};
+            var linha = criar('button', 'issue');
+            linha.type = 'button';
+            linha.title = 'Abrir ' + i.id + (a.nome ? ' em ' + a.nome : '');
+            linha.appendChild(criar('span', 'issue-id', i.id));
+            linha.appendChild(criar('span', 'issue-tipo issue-tipo--' + i.tipo, ROT_TIPO[i.tipo] || i.tipo));
+            var meio = el('span', 'issue__meio', [criar('span', 'issue__titulo', i.titulo)]);
+            meio.appendChild(criar('span', 'issue__sub', [ctx.mostrarApp ? a.nome : '',
+                ROT_PRIORIDADE[i.prioridade] ? 'prioridade ' + ROT_PRIORIDADE[i.prioridade].toLowerCase() : '',
+                qtd(i.comentarios) ? qtd(i.comentarios) + ' comentário(s)' : '',
+                'atualizada ' + U.desde(i.atualizadaEm)].filter(Boolean).join(' · ')));
+            linha.appendChild(meio);
+            linha.appendChild(responsavel(i));
+            linha.appendChild(prazo(i));
+            linha.appendChild(criar('span', 'issue-situacao issue-situacao--' + i.status, ROT_SITUACAO[i.status] || i.status));
+            linha.onclick = function () { ctx.aoAbrir(i); };
+            ul.appendChild(linha);
+        });
+        host.appendChild(ul);
+    }
+
+    function responsavel(i) {
+        var resp = criar('span', 'issue__resp');
+        if (i.responsavel) { resp.appendChild(criar('span', 'eu__avatar issue__avatar', iniciais(i.responsavel))); resp.appendChild(criar('span', 'issue__resp-nome', soNome(i.responsavel))); }
+        else resp.appendChild(criar('span', 'ajuda', 'sem responsável'));
+        return resp;
+    }
+
+    /* A issue e unica pela aplicacao + ID: duas aplicacoes podem ter a mesma sigla. */
+    function chaveDe(i) { return (i.app || '') + '|' + i.id; }
+
+    /* Mudar a situacao pelo Kanban: a mesma rota do formulario, que registra
+       quem mudou e quando no historico da issue. */
+    function moverIssue(i, novo, ctx) {
+        if (i.status === novo) return;
+        var a = ctx.appDe(i);
+        if (!a) return;
+        var antes = i.status, chave = chaveDe(i);
+        api('/api/painel/issue', { metodo: 'POST', corpo: { p: a.repo, sub: a.sub, id: i.id, dados: { status: novo } } })
+            .then(function () {
+                recado(i.id + ': ' + (ROT_SITUACAO[antes] || antes) + ' → ' + (ROT_SITUACAO[novo] || novo) + '. Salve e envie para a equipe ver.');
+                return ctx.recarregar();
+            })
+            .then(function () {
+                var alvo = document.querySelector('.kcard[data-chave="' + (window.CSS && CSS.escape ? CSS.escape(chave) : chave) + '"]');
+                if (alvo) alvo.focus();
+            })
+            .catch(function (e) { recado(e.message, true); });
+    }
+
+    /* ------------------------------------------------------------ KANBAN */
+    function desenharKanban(host, lista, ctx) {
+        host.innerHTML = '';
+        var porChave = {};
+        lista.forEach(function (i) { porChave[chaveDe(i)] = i; });
+        var quadro = criar('div', 'kanban');
+        ORDEM_SITUACAO.forEach(function (s) {
+            var daColuna = lista.filter(function (i) { return i.status === s; }).sort(ordemDeTrabalho);
+            var col = criar('section', 'kanban__coluna kanban__coluna--' + s);
+            col.setAttribute('aria-label', (ROT_SITUACAO[s] || s) + ': ' + daColuna.length + ' issue(s)');
+            var cab = criar('header', 'kanban__cab');
+            cab.appendChild(criar('span', 'kanban__ponto'));
+            cab.appendChild(criar('span', 'kanban__titulo', ROT_SITUACAO[s] || s));
+            cab.appendChild(criar('span', 'kanban__qtd', String(daColuna.length)));
+            col.appendChild(cab);
+            var corpo = criar('div', 'kanban__cartoes');
+            daColuna.forEach(function (i) { corpo.appendChild(cartaoKanban(i, ctx)); });
+            if (!daColuna.length) corpo.appendChild(criar('p', 'kanban__vazio', 'nenhuma'));
+            col.appendChild(corpo);
+            col.addEventListener('dragover', function (ev) {
+                ev.preventDefault();
+                ev.dataTransfer.dropEffect = 'move';
+                col.classList.add('kanban__coluna--alvo');
+            });
+            col.addEventListener('dragleave', function (ev) { if (!col.contains(ev.relatedTarget)) col.classList.remove('kanban__coluna--alvo'); });
+            col.addEventListener('drop', function (ev) {
+                ev.preventDefault();
+                col.classList.remove('kanban__coluna--alvo');
+                var i = porChave[ev.dataTransfer.getData('text/plain')];
+                if (i) moverIssue(i, s, ctx);
+            });
+            quadro.appendChild(col);
+        });
+        host.appendChild(quadro);
+        host.appendChild(criar('p', 'ajuda kanban__dica', 'Arraste um cartão para outra coluna para mudar a situação (no teclado: Shift + ← ou →). ' +
+            'Cada mudança fica no histórico da issue, com o seu nome.'));
+    }
+
+    function cartaoKanban(i, ctx) {
+        var a = ctx.appDe(i) || {};
+        var c = criar('button', 'kcard' + (vencida(i) ? ' kcard--vencida' : '') + (fechada(i) ? ' kcard--fechada' : ''));
+        c.type = 'button';
+        c.draggable = true;
+        c.setAttribute('data-chave', chaveDe(i));
+        c.title = 'Abrir ' + i.id + (ctx.mostrarApp && a.nome ? ' em ' + a.nome : '');
+        var topo = criar('span', 'kcard__topo');
+        topo.appendChild(criar('span', 'issue-id', i.id));
+        topo.appendChild(criar('span', 'issue-tipo issue-tipo--' + i.tipo, ROT_TIPO[i.tipo] || i.tipo));
+        c.appendChild(topo);
+        c.appendChild(criar('span', 'kcard__titulo', i.titulo));
+        if (ctx.mostrarApp && a.nome) c.appendChild(criar('span', 'kcard__app', a.nome));
+        if (i.prioridade === 'alta' || i.prioridade === 'critica') {
+            c.appendChild(criar('span', 'kcard__prioridade kcard__prioridade--' + i.prioridade, 'prioridade ' + ROT_PRIORIDADE[i.prioridade].toLowerCase()));
+        }
+        var rod = criar('span', 'kcard__rodape');
+        rod.appendChild(responsavel(i));
+        rod.appendChild(prazo(i));
+        c.appendChild(rod);
+        c.addEventListener('dragstart', function (ev) {
+            ev.dataTransfer.setData('text/plain', chaveDe(i));
+            ev.dataTransfer.effectAllowed = 'move';
+            c.classList.add('kcard--arrastando');
+        });
+        c.addEventListener('dragend', function () { c.classList.remove('kcard--arrastando'); });
+        c.onclick = function () { ctx.aoAbrir(i); };
+        c.onkeydown = function (ev) {
+            if (!ev.shiftKey || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) return;
+            ev.preventDefault();
+            var k = ORDEM_SITUACAO.indexOf(i.status) + (ev.key === 'ArrowRight' ? 1 : -1);
+            if (k >= 0 && k < ORDEM_SITUACAO.length) moverIssue(i, ORDEM_SITUACAO[k], ctx);
+        };
+        return c;
+    }
+
+    /* ------------------------------------------------------------ AGENDA */
+    var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    var DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+    function desenharAgenda(host, lista, ctx) {
+        host.innerHTML = '';
+        var mes = estado.mes || hoje().slice(0, 7);
+        var ano = parseInt(mes.slice(0, 4), 10), m = parseInt(mes.slice(5, 7), 10) - 1;
+        var porDia = {}, semPrazo = [];
+        lista.forEach(function (i) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(i.prazo || '')) semPrazo.push(i);
+            else (porDia[i.prazo] = porDia[i.prazo] || []).push(i);
+        });
+        Object.keys(porDia).forEach(function (k) { porDia[k].sort(ordemDeTrabalho); });
+
+        function irPara(delta) {
+            estado.mes = isoDe(new Date(ano, m + delta, 1)).slice(0, 7);
+            estado.dia = null;
+            ctx.redesenhar();
+        }
+        function escolherDia(iso) { estado.dia = estado.dia === iso ? null : iso; ctx.redesenhar(); }
+
+        var cab = criar('div', 'agenda__cab');
+        var ant = criar('button', 'btn btn--mini', '‹'); ant.type = 'button'; ant.setAttribute('aria-label', 'Mês anterior'); ant.onclick = function () { irPara(-1); };
+        var prox = criar('button', 'btn btn--mini', '›'); prox.type = 'button'; prox.setAttribute('aria-label', 'Próximo mês'); prox.onclick = function () { irPara(1); };
+        var hj = criar('button', 'btn btn--mini', 'Hoje'); hj.type = 'button';
+        hj.onclick = function () { estado.mes = hoje().slice(0, 7); estado.dia = hoje(); ctx.redesenhar(); };
+        cab.appendChild(ant);
+        cab.appendChild(criar('h2', 'agenda__mes', MESES[m] + ' de ' + ano));
+        cab.appendChild(prox);
+        cab.appendChild(hj);
+        var leg = criar('div', 'agenda__legenda');
+        ORDEM_SITUACAO.forEach(function (s) { leg.appendChild(el('span', 'agenda__leg agenda__leg--' + s, [criar('i'), ROT_SITUACAO[s]])); });
+        leg.appendChild(el('span', 'agenda__leg agenda__leg--vencida', [criar('i'), 'Vencida']));
+        cab.appendChild(leg);
+        host.appendChild(cab);
+
+        /* Vencida de mes anterior nao aparece na grade: avisa e leva ate ela. */
+        var inicioMes = mes + '-01';
+        var atrasadas = lista.filter(function (i) { return vencida(i) && i.prazo < inicioMes; }).sort(function (a, b) { return a.prazo.localeCompare(b.prazo); });
+        if (atrasadas.length) {
+            var av = criar('div', 'aviso agenda__aviso');
+            av.appendChild(criar('span', null, '⚠ ' + atrasadas.length + ' issue(s) vencida(s) com prazo antes deste mês.'));
+            var ir = criar('button', 'btn btn--mini', 'Ir para a mais antiga'); ir.type = 'button';
+            ir.onclick = function () { estado.mes = atrasadas[0].prazo.slice(0, 7); estado.dia = atrasadas[0].prazo; ctx.redesenhar(); };
+            av.appendChild(ir);
+            host.appendChild(av);
+        }
+
+        var grade = criar('div', 'agenda');
+        DIAS_SEMANA.forEach(function (d) { grade.appendChild(criar('div', 'agenda__semana', d)); });
+        var desloc = (new Date(ano, m, 1).getDay() + 6) % 7;              /* segunda = 0 */
+        var diasNoMes = new Date(ano, m + 1, 0).getDate();
+        var total = Math.ceil((desloc + diasNoMes) / 7) * 7;
+        var hojeIso = hoje();
+        for (var k = 0; k < total; k++) {
+            var dia = new Date(ano, m, 1 - desloc + k);
+            var iso = isoDe(dia);
+            var doDia = porDia[iso] || [];
+            var cel = criar('div', 'agenda__dia' + (dia.getMonth() !== m ? ' agenda__dia--fora' : '') +
+                (iso === hojeIso ? ' agenda__dia--hoje' : '') + (dia.getDay() === 0 || dia.getDay() === 6 ? ' agenda__dia--fds' : '') +
+                (estado.dia === iso ? ' agenda__dia--selecionado' : '') + (doDia.some(vencida) ? ' agenda__dia--vencida' : ''));
+            var num = criar('button', 'agenda__num', String(dia.getDate()));
+            num.type = 'button';
+            num.setAttribute('aria-label', dataBr(iso) + (iso === hojeIso ? ' (hoje)' : '') + (doDia.length ? ': ' + doDia.length + ' issue(s) com prazo' : ': nenhuma issue'));
+            num.onclick = escolherDia.bind(null, iso);
+            cel.appendChild(num);
+            doDia.slice(0, 3).forEach(function (i) { cel.appendChild(chipAgenda(i, ctx)); });
+            if (doDia.length > 3) {
+                var mais = criar('button', 'agenda__mais', '+' + (doDia.length - 3) + ' mais');
+                mais.type = 'button';
+                mais.onclick = escolherDia.bind(null, iso);
+                cel.appendChild(mais);
+            }
+            grade.appendChild(cel);
+        }
+        host.appendChild(grade);
+
+        if (estado.dia) {
+            var doSel = porDia[estado.dia] || [];
+            var b = criar('div', 'bloco agenda__detalhe');
+            b.appendChild(criar('p', 'bloco__titulo', 'Prazo em ' + dataBr(estado.dia) + ' (' + doSel.length + ')'));
+            if (!doSel.length) b.appendChild(criar('p', 'ajuda', 'Nenhuma issue com prazo neste dia.'));
+            doSel.forEach(function (i) { b.appendChild(linhaCompacta(i, ctx)); });
+            host.appendChild(b);
+        }
+        if (semPrazo.length) {
+            var det = document.createElement('details');
+            det.className = 'bloco agenda__sem-prazo';
+            det.appendChild(criar('summary', null, 'Sem prazo (' + semPrazo.length + '): não aparecem no calendário'));
+            semPrazo.sort(ordemDeTrabalho).forEach(function (i) { det.appendChild(linhaCompacta(i, ctx)); });
+            host.appendChild(det);
+        }
+    }
+
+    function chipAgenda(i, ctx) {
+        var a = ctx.appDe(i) || {};
+        var c = criar('button', 'achip achip--' + i.status + (vencida(i) ? ' achip--vencida' : ''));
+        c.type = 'button';
+        c.title = i.id + ' · ' + i.titulo + ' · ' + (ROT_SITUACAO[i.status] || i.status) + (vencida(i) ? ' · vencida' : '') +
+                  (ctx.mostrarApp && a.nome ? ' · ' + a.nome : '');
+        c.appendChild(criar('span', 'achip__id', i.id));
+        c.appendChild(criar('span', 'achip__titulo', i.titulo));
+        c.onclick = function () { ctx.aoAbrir(i); };
+        return c;
+    }
+
+    function linhaCompacta(i, ctx) {
+        var a = ctx.appDe(i) || {};
+        var l = criar('button', 'ilinha');
+        l.type = 'button';
+        l.appendChild(criar('span', 'issue-id', i.id));
+        l.appendChild(criar('span', 'ilinha__titulo', i.titulo));
+        l.appendChild(criar('span', 'ilinha__app', ctx.mostrarApp && a.nome ? a.nome : ''));
+        l.appendChild(prazo(i));
+        l.appendChild(criar('span', 'issue-situacao issue-situacao--' + i.status, ROT_SITUACAO[i.status] || i.status));
+        l.onclick = function () { ctx.aoAbrir(i); };
+        return l;
     }
 
     /* ======================================================== LIGACOES */

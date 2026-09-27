@@ -47,6 +47,15 @@ function erroDe(msg, codigo) { return Object.assign(new Error(msg), { codigo: co
 function posix(p) { return String(p || '').split(path.sep).join('/'); }
 function agora() { return new Date().toISOString(); }
 
+/* O DIA DE HOJE NO RELOGIO DA PESSOA, e nao em UTC. Com toISOString, depois
+   das 21h em Brasilia ja era "amanha": o prazo vencia um dia antes e a ficha
+   criada as 22h nascia com a data do dia seguinte. */
+function hojeLocal(d) {
+    d = d || new Date();
+    function dois(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + dois(d.getMonth() + 1) + '-' + dois(d.getDate());
+}
+
 /* ==========================================================================
    ONDE ESTAO AS APLICACOES
    ========================================================================== */
@@ -339,7 +348,7 @@ function listarIssues(appDir) {
 }
 
 function resumoIssues(appDir) {
-    var hoje = new Date().toISOString().slice(0, 10);
+    var hoje = hojeLocal();
     var l = listarIssues(appDir).issues;
     var abertas = l.filter(function (i) { return i.status !== 'concluida' && i.status !== 'cancelada'; });
     return {
@@ -347,6 +356,41 @@ function resumoIssues(appDir) {
         vencidas: abertas.filter(function (i) { return i.prazo && i.prazo < hoje; }).length,
         bugs: abertas.filter(function (i) { return i.tipo === 'bug'; }).length
     };
+}
+
+/* ==========================================================================
+   AS ISSUES DE TODAS AS APLICACOES (o painel unificado)
+   --------------------------------------------------------------------------
+   Uma lista so, com a aplicacao de cada issue, para a Lista, o Kanban e a
+   Agenda. Vai so o que essas visoes mostram: descricao, comentarios e
+   historico ficam na issue e sao lidos quando ela e aberta.
+   ========================================================================== */
+function resumoDaIssue(i) {
+    return { id: texto(i.id), titulo: texto(i.titulo), tipo: texto(i.tipo), prioridade: texto(i.prioridade),
+             status: texto(i.status), responsavel: texto(i.responsavel), prazo: texto(i.prazo),
+             versaoAlvo: texto(i.versaoAlvo), criadaEm: texto(i.criadaEm), atualizadaEm: texto(i.atualizadaEm),
+             comentarios: lista(i.comentarios).length, evidencias: lista(i.evidencias).length };
+}
+
+/* repositorios: [{ caminho, nome }] - os versionados das pastas cadastradas. */
+function issuesDeTodas(repositorios) {
+    var aplicacoes = [], issues = [], problemas = [];
+    (repositorios || []).forEach(function (r) {
+        acharAplicacoes(r.caminho).forEach(function (sub) {
+            var dir = pastaDaApp(r.caminho, sub);
+            var f = lerFichaDaPasta(dir);
+            if (!f || !f.dados) return;
+            var app = { chave: r.caminho + '|' + sub, repo: r.caminho, repoNome: r.nome, sub: sub,
+                        nome: f.dados.aplicacao.nome, codigo: f.dados.aplicacao.codigo };
+            var l = listarIssues(dir);
+            app.total = l.issues.length;
+            aplicacoes.push(app);
+            l.problemas.forEach(function (p) { problemas.push(app.nome + ': ' + p); });
+            l.issues.forEach(function (i) { issues.push(Object.assign(resumoDaIssue(i), { app: app.chave })); });
+        });
+    });
+    aplicacoes.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+    return { aplicacoes: aplicacoes, issues: issues, problemas: problemas, hoje: hojeLocal() };
 }
 
 function proximoId(appDir, codigo) {
@@ -483,7 +527,7 @@ var MODELO = path.join(__dirname, '..', 'modelo');
 
 function criarFicha(repo, remotoUrl, hoje) {
     if (fs.existsSync(path.join(repo, ARQUIVO))) throw erroDe('este repositório já tem gito.json');
-    hoje = hoje || new Date().toISOString().slice(0, 10);
+    hoje = hoje || hojeLocal();
     var nome = path.basename(repo);
     var modelo = JSON.parse(fs.readFileSync(path.join(MODELO, 'gito.json'), 'utf8'));
     modelo.aplicacao.nome = nome;
@@ -511,5 +555,6 @@ module.exports = {
     subValida: subValida, pastaDaApp: pastaDaApp, acharAplicacoes: acharAplicacoes,
     lerFicha: lerFicha, lerFichaDaPasta: lerFichaDaPasta, versoes: versoes,
     listarIssues: listarIssues, resumoIssues: resumoIssues, salvarIssue: salvarIssue, comentar: comentar,
+    issuesDeTodas: issuesDeTodas, hojeLocal: hojeLocal,
     arquivoDaApp: arquivoDaApp, criarFicha: criarFicha, idValido: idValido
 };

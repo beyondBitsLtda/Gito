@@ -342,6 +342,12 @@ input[type=text], input[type=email], input[type=password], input[type=date], tex
     padding: 9px 12px; border: 1px solid var(--borda);
     border-radius: var(--raio-p); background: var(--superficie); color: var(--tinta);
 }
+/* A LISTA ABERTA DO SELECT (GITO-0001). No tema escuro a --superficie e
+   translucida; o Chrome/Edge no Windows desenha a lista aberta sobre BRANCO
+   e mantem a letra clara do tema - lista branca com texto quase invisivel.
+   As opcoes ganham fundo solido do tema (--fundo e opaco nos dois). */
+select option, select optgroup { background-color: var(--fundo); color: var(--tinta); }
+select option:disabled { color: var(--tinta-3); }
 textarea { font-family: var(--mono); font-size: 12.5px; max-width: 760px; resize: vertical; display: block; }
 input:focus, textarea:focus, select:focus { outline: 3px solid var(--subsea); outline-offset: 1px; border-color: transparent; }
 
@@ -934,3 +940,150 @@ button.arv__botao--link { color: var(--subsea); text-decoration: underline; text
 @media (prefers-reduced-motion: reduce) {
     .abertura, .abertura__logo, .abertura__linha, .abertura__texto, .abertura__halo, .abertura__linha i { animation: none; transition: none; }
 }
+
+/* ==========================================================================
+   ISSUES: KANBAN, AGENDA E A VISAO DE TODAS AS APLICACOES (GITO-0002)
+   --------------------------------------------------------------------------
+   A cor de cada situacao e a mesma das pilulas da lista: aberta (anel
+   vazio: ainda nao comecou), em andamento (Subsea), em revisao (Industria),
+   concluida (Servicos) e cancelada (cinza). O Industria nunca e cor de
+   texto sobre claro (nao passa do AA): aqui ele e so borda e ponto.
+   ========================================================================== */
+.painel-visoes { margin-bottom: 18px; }
+.issues-geral__nota { font-size: 12.5px; color: var(--tinta-3); margin: -4px 0 12px; }
+.issues-barra .visao-issues { margin: 0; }
+.contagem--alerta:not(.contagem--ativa) { box-shadow: inset 0 -3px 0 var(--industria), var(--sombra); }
+.issue__resp-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.kanban__coluna, .agenda__leg { --sit: var(--tinta-2); }
+.kanban__coluna--em-andamento, .agenda__leg--em-andamento, .achip--em-andamento { --sit: var(--subsea); }
+.kanban__coluna--em-revisao, .agenda__leg--em-revisao, .achip--em-revisao { --sit: var(--industria); }
+.kanban__coluna--concluida, .agenda__leg--concluida, .achip--concluida { --sit: var(--servicos); }
+.kanban__coluna--cancelada, .agenda__leg--cancelada, .achip--cancelada { --sit: var(--cinza); }
+.agenda__leg--vencida, .achip--vencida { --sit: var(--vermelho); }
+
+/* ---------- KANBAN ---------- */
+.kanban {
+    display: grid; grid-template-columns: repeat(5, minmax(232px, 1fr)); gap: 12px;
+    align-items: start; overflow-x: auto; padding-bottom: 8px;
+}
+.kanban__coluna {
+    background: var(--superficie-3); border: 1px solid var(--borda); border-top: 4px solid var(--sit);
+    border-radius: var(--raio); padding: 10px; min-height: 180px;
+    transition: border-color .12s, background-color .12s;
+}
+.kanban__coluna--aberta { border-top-color: var(--tinta-3); }
+.kanban__coluna--alvo { border-color: var(--subsea); background: var(--superficie-2); }
+.kanban__cab { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
+.kanban__ponto { width: 11px; height: 11px; border-radius: 50%; background: var(--sit); flex: 0 0 auto; }
+.kanban__coluna--aberta .kanban__ponto { background: transparent; box-shadow: inset 0 0 0 2px var(--tinta-2); }
+.kanban__titulo { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta); }
+.kanban__qtd { margin-left: auto; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--tinta-2);
+               background: var(--superficie-2); border-radius: var(--pilula); padding: 1px 9px; }
+.kanban__cartoes { display: flex; flex-direction: column; gap: 8px; }
+.kanban__vazio { margin: 0; padding: 18px 8px; text-align: center; font-size: 12.5px; color: var(--tinta-3);
+                 border: 2px dashed var(--borda); border-radius: var(--raio-p); }
+.kanban__dica { font-size: 12.5px; color: var(--tinta-3); margin-top: 6px; }
+
+.kcard {
+    appearance: none; display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left;
+    padding: 10px 12px; font-family: inherit; font-size: 13px; color: var(--tinta);
+    background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-p);
+    box-shadow: var(--sombra); cursor: grab;
+}
+/* No escuro a --superficie e translucida: o cartao fica solido para
+   descolar da coluna. */
+:root[data-theme="dark"] .kcard { background: var(--fundo); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .kcard { background: var(--fundo); } }
+.kcard:hover { border-color: var(--subsea); }
+.kcard:focus-visible { outline: 3px solid var(--subsea); outline-offset: 2px; }
+.kcard--arrastando { opacity: .45; cursor: grabbing; }
+.kcard--vencida { border-left: 4px solid var(--vermelho); }
+.kcard--fechada { opacity: .72; }
+.kcard__topo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kcard__titulo { font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.kcard__app { font-size: 12px; color: var(--tinta-2); }
+.kcard__prioridade { align-self: flex-start; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+                     padding: 2px 8px; border-radius: var(--pilula); background: var(--superficie-2); color: var(--tinta); }
+.kcard__prioridade--critica { background: var(--vermelho); color: var(--branco); }
+.kcard__rodape { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.kcard__rodape .issue__resp { font-size: 12px; min-width: 0; }
+.kcard__rodape .issue__avatar { width: 22px; height: 22px; font-size: 9.5px; }
+
+/* ---------- AGENDA ---------- */
+.agenda__cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.agenda__mes { margin: 0 6px; font-size: 18px; font-weight: 700; min-width: 190px; text-align: center; }
+.agenda__mes::first-letter { text-transform: uppercase; }
+.agenda__legenda { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; font-size: 12px; color: var(--tinta-2); }
+.agenda__leg { display: inline-flex; align-items: center; gap: 5px; }
+.agenda__leg i { width: 10px; height: 10px; border-radius: 3px; background: var(--sit); }
+.agenda__leg--aberta i { background: transparent; box-shadow: inset 0 0 0 2px var(--tinta-2); }
+.agenda__aviso { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+/* A grade: o espaco de 1px entre os dias deixa aparecer o fundo (a borda);
+   por isso cada dia tem fundo SOLIDO (--fundo, com a camada do tema por cima). */
+.agenda {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px;
+    background: var(--borda); border: 1px solid var(--borda); border-radius: var(--raio); overflow: hidden;
+}
+.agenda__semana { background: linear-gradient(var(--superficie-2), var(--superficie-2)), var(--fundo); padding: 7px 8px;
+                  font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-2); }
+.agenda__dia {
+    background: var(--fundo); min-height: 108px; padding: 5px 6px 7px;
+    display: flex; flex-direction: column; gap: 3px; min-width: 0;
+}
+.agenda__dia--fds { background: linear-gradient(var(--superficie-3), var(--superficie-3)), var(--fundo); }
+.agenda__dia--fora > * { opacity: .45; }
+.agenda__dia--vencida { box-shadow: inset 0 3px 0 var(--vermelho); }
+.agenda__dia--selecionado { box-shadow: inset 0 0 0 2px var(--marca); }
+.agenda__dia--selecionado.agenda__dia--vencida { box-shadow: inset 0 0 0 2px var(--marca), inset 0 5px 0 var(--vermelho); }
+.agenda__num {
+    appearance: none; align-self: flex-start; border: 0; background: none; cursor: pointer;
+    font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--tinta-2);
+    min-width: 26px; height: 26px; border-radius: var(--pilula); padding: 0 6px;
+}
+.agenda__num:hover { background: var(--superficie-2); color: var(--tinta); }
+.agenda__num:focus-visible { outline: 3px solid var(--subsea); outline-offset: 1px; }
+.agenda__dia--hoje .agenda__num { background: var(--subsea); color: var(--branco); }
+.achip {
+    appearance: none; display: flex; align-items: baseline; gap: 5px; width: 100%; min-width: 0; text-align: left;
+    padding: 3px 6px; border: 0; border-left: 3px solid var(--sit); border-radius: 5px; cursor: pointer;
+    background: var(--superficie-2); color: var(--tinta); font-family: inherit; font-size: 11.5px; line-height: 1.3;
+}
+.achip--aberta { box-shadow: inset 0 0 0 1px var(--borda); border-left-color: var(--tinta-3); }
+.achip:hover { box-shadow: inset 0 0 0 1px var(--subsea); }
+.achip:focus-visible { outline: 3px solid var(--subsea); outline-offset: 1px; }
+.achip--vencida { background: var(--vermelho); color: var(--branco); border-left-color: var(--vermelho); }
+.achip--concluida .achip__titulo, .achip--cancelada .achip__titulo { text-decoration: line-through; }
+.achip__id { font-family: var(--mono); font-size: 10.5px; font-weight: 700; flex: 0 0 auto; }
+.achip__titulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.agenda__mais { appearance: none; border: 0; background: none; padding: 1px 6px; text-align: left; cursor: pointer;
+                font-family: inherit; font-size: 11.5px; font-weight: 700; color: var(--tinta-2); }
+.agenda__mais:hover { color: var(--tinta); text-decoration: underline; }
+.agenda__detalhe, .agenda__sem-prazo { margin-top: 14px; }
+.agenda__sem-prazo summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--tinta-2); margin-bottom: 4px; }
+
+/* uma issue numa linha so: o detalhe do dia e as sem prazo */
+.ilinha {
+    appearance: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center;
+    width: 100%; text-align: left; padding: 8px 4px; border: 0; border-top: 1px solid var(--borda); background: none;
+    font-family: inherit; font-size: 13px; color: var(--tinta); cursor: pointer;
+}
+.ilinha:first-of-type { border-top: 0; }
+.ilinha:hover .ilinha__titulo { text-decoration: underline; }
+.ilinha:focus-visible { outline: 3px solid var(--subsea); outline-offset: 1px; }
+.ilinha__titulo { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ilinha__app { font-size: 12px; color: var(--tinta-2); white-space: nowrap; }
+
+/* Celular: o dia vira uma faixa de barras coloridas (o toque abre o dia). */
+@media (max-width: 760px) {
+    .agenda__dia { min-height: 62px; padding: 3px; }
+    .achip { padding: 0; height: 7px; border-left-width: 0; background: var(--sit); }
+    .achip > * { display: none; }
+    .achip--aberta { background: var(--tinta-3); }
+    .achip--vencida { background: var(--vermelho); }
+    .agenda__legenda { margin-left: 0; }
+    .ilinha { grid-template-columns: auto minmax(0, 1fr); }
+    .ilinha > :nth-child(n+3) { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .kanban__coluna { transition: none; } }

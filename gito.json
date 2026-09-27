@@ -3,16 +3,41 @@
   "aplicacao": {
     "nome": "Gito",
     "codigo": "GITO",
-    "descricao": "Versionar o trabalho sem terminal e sem saber git, com o painel de versões, ficha técnica e issues das aplicações.",
+    "descricao": "Aplicação local que deixa quem desenvolve versionar o trabalho sem terminal e sem saber git e dá à equipe o painel das aplicações: versões por branch, ficha técnica e issues de todos os repositórios.",
     "tipo": "Aplicação local",
-    "situacao": "em desenvolvimento",
+    "situacao": "em produção",
     "responsavel": "Brayan Rodrigues",
-    "equipe": "TI Delp - Desenvolvimento"
+    "equipe": "TI / Desenvolvimento Fluig"
   },
-  "versao": "1.1.0-auto-testes-gen.1",
-  "atualizadoEm": "2026-09-26",
-  "compilacao": { "numero": 2, "data": "2026-09-26", "artefato": "" },
+  "versao": "1.1.0-issues-0-1-0.1",
+  "atualizadoEm": "2026-09-27",
+  "compilacao": {
+    "numero": 3,
+    "data": "2026-09-27",
+    "artefato": ""
+  },
   "historico": [
+    {
+      "versao": "1.1.0-issues-0-1-0.1",
+      "data": "2026-09-27",
+      "branch": "Issues_0.1.0",
+      "tipo": "funcionalidade",
+      "resumo": "O painel das aplicações chega ao repositório do Gito, com as issues de todas as aplicações numa visão só (lista, kanban e agenda) e as listas legíveis no modo escuro.",
+      "itens": [
+        "Código do painel (versões por branch, ficha técnica, verificação de serviços e issues) trazido para este repositório, a partir da cópia em uso no devkittools.",
+        "Painel > \"Issues de todas as aplicações\": as issues de todos os repositórios juntas, com contagem por situação, vencidas e as que vencem em 7 dias, e filtro por aplicação, tipo, responsável e busca.",
+        "Visão Kanban: uma coluna por situação; arrastar o cartão (ou Shift + ← →) muda a situação e registra quem mudou no histórico da issue.",
+        "Visão Agenda: calendário do mês pelo prazo, com o dia de hoje, as vencidas em vermelho, aviso das vencidas de meses anteriores e a lista das sem prazo.",
+        "As visões Kanban e Agenda também na aba Issues de cada aplicação; clicar numa issue da visão geral abre a aplicação com ela aberta.",
+        "Modo escuro: a lista aberta dos campos de seleção (tipo, prioridade, situação, responsável) aparecia branca com letra clara; agora tem fundo escuro e contraste.",
+        "O \"hoje\" do painel passa a ser o do relógio local: depois das 21h o prazo do dia aparecia vencido e a ficha criada nascia com a data seguinte.",
+        "Correção: trocar para \"Issues\" enquanto as aplicações carregavam desenhava os cartões por cima das issues."
+      ],
+      "issues": [
+        "GITO-0001",
+        "GITO-0002"
+      ]
+    },
     {
       "versao": "1.1.0-auto-testes-gen.1",
       "data": "2026-09-26",
@@ -29,6 +54,27 @@
       "issues": []
     },
     {
+      "versao": "1.0.0",
+      "data": "2026-09-26",
+      "branch": "main",
+      "tipo": "funcionalidade",
+      "resumo": "Primeira versão do Gito: a nova versão do delp-git, com outra cara (mapa de metrô, tema claro e escuro) e as mesmas funções, menos a comparação com a plataforma.",
+      "itens": [
+        "Meus repositórios: o estado de todos de uma vez (tudo salvo, a salvar, falta enviar, pasta sem versão).",
+        "O que mudou: escolher os arquivos, ver o diff e salvar só o que ficou marcado.",
+        "Arquivos: a árvore do repositório com o código realçado e numerado.",
+        "Histórico: as versões salvas e o download de qualquer uma num .zip, sem mexer na pasta.",
+        "Branches: criar, trocar, publicar, trazer do servidor e juntar, escolhendo o lado de cada arquivo nos conflitos.",
+        "Merge Requests do GitLab em modo só leitura, com token read_api guardado apenas na memória.",
+        "Enviar e trazer (push e pull) com o erro traduzido e a mensagem original do git a um clique.",
+        "Criar repositório numa pasta sem versão, cadastrar as pastas (aceita Z:\\ do Explorer) e pedir nome e e-mail antes do primeiro commit.",
+        "Porta 7027 e configuração em %APPDATA%\\gito: roda ao mesmo tempo que o delp-git e herda as pastas dele na primeira abertura.",
+        "Abertura com o Windows em modo oculto (iniciar-com-o-windows.cmd) e encerramento pelo parar-gito.cmd, sem administrador.",
+        "Ficha técnica preenchida e versão alinhada à que a aplicação declara (1.0.0 em app.js e package.json)."
+      ],
+      "issues": []
+    },
+    {
       "versao": "1.0.0-auto-testes-gen.1",
       "data": "2026-09-26",
       "branch": "Auto_Testes_Gen",
@@ -40,32 +86,72 @@
         "Cookie de acesso SameSite=Strict."
       ],
       "issues": []
+    },
+    {
+      "versao": "0.1.0",
+      "data": "2026-09-26",
+      "branch": "main",
+      "tipo": "funcionalidade",
+      "resumo": "Ficha criada no Gito.",
+      "itens": [
+        "Primeiro registro de versão e ficha técnica da aplicação."
+      ],
+      "issues": []
     }
   ],
   "ficha": {
     "escopo": {
-      "objetivo": "Deixar qualquer pessoa da equipe versionar o próprio trabalho com segurança, sem terminal, e dar à equipe uma visão única das aplicações: versões, ficha técnica e pendências.",
+      "objetivo": "Fazer quem desenvolve versionar o próprio código sem precisar do terminal nem de conhecer os comandos do git, sem nenhuma operação que faça alguém perder código, e dar à equipe uma visão única das aplicações: versões, ficha técnica e pendências.",
       "inclui": [
-        "Estado de todos os repositórios das pastas do usuário.",
-        "Salvar (commit), enviar (push), trazer (pull), branches, junção com resolução de conflito por arquivo.",
-        "Consulta de Merge Requests no GitLab (somente leitura).",
-        "Painel das aplicações: versões por branch, ficha técnica, verificação de serviços e issues."
+        "Varrer as pastas cadastradas (até 2 níveis) e mostrar o estado de cada repositório, apontando as pastas com código e sem versão.",
+        "Salvar (add + commit) só os arquivos marcados, com o diff de cada arquivo e a versão anterior para comparar.",
+        "Navegar na árvore do repositório com o código realçado e numerado.",
+        "Listar o histórico e baixar qualquer versão num .zip (git archive), sem alterar a pasta de trabalho.",
+        "Criar, trocar, publicar, baixar e trazer branches; juntar branches, escolher o lado de cada arquivo em conflito, concluir ou desfazer a junção.",
+        "Enviar e trazer (push e pull) usando o Git Credential Manager da máquina, com o erro traduzido e a saída original do git disponível.",
+        "Consultar Merge Requests do GitLab (lista, conflito, pipeline, aprovações e o que cada um muda) em modo só leitura, e montar o link para abrir um Merge Request no GitLab.",
+        "Criar repositório numa pasta que ainda não tem versão.",
+        "Cadastrar as pastas de repositórios (aceita unidade mapeada, como Z:\\, colada do Explorer), com um navegador de pastas.",
+        "Pedir nome e e-mail do git uma vez, antes do primeiro commit, para a autoria sair certa.",
+        "Abrir pelo gito.cmd, criar atalho na Área de Trabalho e, opcionalmente, subir oculto com o Windows.",
+        "Painel das aplicações: a versão publicada na main, a de cada branch (lida do git, sem trocar de branch) e a da pasta, com o histórico de versões.",
+        "Ficha técnica de cada aplicação (gito.json) com a verificação de \"no ar\" dos serviços: HTTP para endereços e TCP para bancos.",
+        "Issues por aplicação em .gito/issues: tipo, prioridade, responsável, prazo, situação, comentários, evidências e histórico de cada mudança.",
+        "Issues de todas as aplicações numa visão só, com as visões Lista, Kanban (mudar a situação arrastando) e Agenda (calendário pelo prazo).",
+        "Criar a ficha (gito.json, GITO.md e a linha @GITO.md no CLAUDE.md) num repositório que ainda não tem, sem sobrescrever nada."
       ],
       "naoInclui": [
-        "Rebase, cherry-pick ou edição de histórico.",
-        "Criar ou aprovar Merge Request no GitLab (só consulta).",
-        "Guardar senhas ou tokens em disco."
+        "Não faz rebase, cherry-pick nem edição de histórico: nenhuma operação que possa fazer alguém perder código.",
+        "Não aprova, aceita nem fecha Merge Requests: a revisão de código continua no GitLab (qualquer escrita no GitLab exige avaliação prévia de Governança e Compliance).",
+        "Não consulta Merge Requests nem Pull Requests de repositórios hospedados no GitHub.",
+        "Não compara com a plataforma Fluig (a aba \"Fluig\" do delp-git foi removida).",
+        "Não é acessível pela rede: escuta só em 127.0.0.1, para a pessoa que o abriu.",
+        "Não instala nada, não roda como serviço, não mexe no registro e não precisa de administrador.",
+        "Não roda git fora das pastas que a pessoa cadastrou (o navegador de pastas só lista pastas para escolher).",
+        "Não sincroniza as issues com GitLab ou GitHub Issues: elas são arquivos do repositório e chegam à equipe quando alguém salva e envia.",
+        "Não apaga issue, comentário nem evidência."
       ]
     },
     "stack": [
-      "Node.js 14 ou mais novo (sem dependências, sem npm install)",
-      "Git for Windows",
-      "HTML, CSS e JavaScript no navegador, sem framework e sem build"
+      "Node.js 14 ou mais novo, sem nenhuma dependência npm (só módulos nativos: http, https, fs, path, os, crypto, url e child_process)",
+      "Git for Windows na estação (chamado por spawn, sem shell) e o Git Credential Manager para enviar e trazer",
+      "JavaScript no navegador sem framework e sem build, HTML e CSS (tema claro e escuro, fonte Barlow com alternativa local)",
+      "API REST v4 do GitLab (só leitura, token read_api)",
+      "Scripts .cmd do Windows com PowerShell: gito.cmd (abrir e modo oculto), criar-atalho.cmd, iniciar-com-o-windows.cmd e parar-gito.cmd",
+      "Contrato de versionamento GITO.md e modelo em branco em modelo/ (gito.json, GITO.md e CLAUDE.md) para os outros repositórios",
+      "Testes em Node puro (teste/*.js), rodados com npm run teste: segurança, ajustes do git, salvar, versões, realce, árvore, junção, branches, GitLab e o painel (com repositórios git de verdade)"
     ],
     "arquitetura": {
-      "resumo": "Servidor HTTP local em 127.0.0.1, que executa o git com a identidade do usuário. Não tem banco de dados: a configuração fica em %APPDATA%\\gito\\config.json e as issues são arquivos versionados em .gito/ dentro de cada aplicação.",
+      "resumo": "Um servidor Node (app.js + src/) sobe na máquina de quem desenvolve, em 127.0.0.1:7027, e entrega a interface (web/) e uma API JSON (/api/...). Rodar na sessão da própria pessoa é a decisão central: a unidade Z: existe, as permissões são as dela, os commits saem com a autoria dela e o push usa o Git Credential Manager já instalado. src/git.js é a única porta para o git: todo comando sai dali por spawn, com lista de argumentos, shell desligado e os ajustes --no-optional-locks, core.quotepath=false, core.longpaths=true e GIT_TERMINAL_PROMPT=0. src/repos.js varre as pastas e calcula o estado de cada repositório; src/painel.js lê o gito.json de cada aplicação (até 3 níveis), as versões de cada branch com git show e as issues de .gito/issues; src/verificar.js confere se os serviços da ficha estão no ar; src/gitlab.js consulta os Merge Requests por HTTPS, só com GET, no servidor de onde vem o remoto do repositório. Segurança: escuta só em 127.0.0.1, token por instalação (cabeçalho X-Gito-Token ou cookie HttpOnly; SameSite=Strict), Host e Origin conferidos contra DNS rebinding, Content-Security-Policy sem nada de fora e cerca que só aceita caminhos dentro das pastas cadastradas (recusa \"..\"). Não há banco de dados: a configuração de cada pessoa (pastas e token) fica em %APPDATA%\\gito\\config.json; no modo oculto, a saída e os erros vão para %LOCALAPPDATA%\\gito\\saida.log e erros.log; o token do GitLab fica só na memória e some ao fechar o app; as issues e as evidências são arquivos versionados em .gito/ dentro de cada aplicação. O código pode ficar numa pasta de rede e cada pessoa roda de lá.",
       "diagramas": [
-        { "titulo": "Componentes", "arquivo": "docs/arquitetura.svg" },
+        {
+          "titulo": "Componentes",
+          "arquivo": "docs/arquitetura.svg"
+        },
+        {
+          "titulo": "Como o Gito opera o git na máquina de quem desenvolve",
+          "mermaid": "flowchart LR\n  P[Pessoa] -->|gito.cmd ou atalho| S[Servidor Node<br/>127.0.0.1:7027]\n  P -->|navegador| UI[Interface<br/>web/index.html]\n  UI -->|API JSON + token| S\n  S -->|config.js: pastas e token| CFG[(%APPDATA%\\gito<br/>config.json)]\n  S -->|git.js: spawn sem shell| G[Git for Windows]\n  G -->|lê e grava só nas pastas cadastradas| R[(Repositórios<br/>da pessoa, inclusive Z:)]\n  G -->|push e pull<br/>Git Credential Manager| REM[Servidor git<br/>GitLab / GitHub]\n  S -->|gitlab.js: só GET, read_api| API[API do GitLab]"
+        },
         {
           "titulo": "Como o painel lê as versões",
           "mermaid": "flowchart LR\n  P[Painel] -->|git show main:gito.json| M[versão publicada]\n  P -->|git show branch:gito.json| B[versão de cada branch]\n  P -->|disco| W[versão na sua pasta]\n  P -->|.gito/issues| I[issues]"
@@ -73,19 +159,60 @@
       ]
     },
     "hospedagem": [
-      { "ambiente": "Estação do desenvolvedor", "onde": "Roda na máquina de cada pessoa, a partir da pasta estacao/gito", "url": "http://127.0.0.1:7027/", "verificar": true }
+      {
+        "ambiente": "Estação de trabalho (local)",
+        "onde": "No computador de cada pessoa (Windows), com Node.js 14 ou mais novo e Git for Windows. O código pode ficar numa pasta de rede e ser executado de lá, sem instalação. Abre pelo gito.cmd ou pelo atalho da Área de Trabalho; fechar a janela encerra. No modo oculto (iniciar-com-o-windows.cmd), sobe no logon e encerra pelo parar-gito.cmd. Na primeira abertura, o endereço exige o token desta instalação, que o terminal mostra.",
+        "url": "http://127.0.0.1:7027/",
+        "verificar": false
+      }
     ],
     "bancoDeDados": [],
     "integracoes": [
-      { "nome": "Git (linha de comando)", "descricao": "Toda operação de versionamento passa por src/git.js, sem shell.", "url": "" },
-      { "nome": "GitLab", "descricao": "Consulta de Merge Requests com token pessoal read_api, só em memória.", "url": "https://gitlab.com" }
+      {
+        "nome": "Git for Windows",
+        "descricao": "Todo o versionamento é feito pelo git instalado na estação, chamado pelo src/git.js com a identidade (user.name e user.email) da própria pessoa. Se faltar, o gito.cmd orienta abrir chamado no GLPI.",
+        "url": "https://git-scm.com/download/win"
+      },
+      {
+        "nome": "Git Credential Manager",
+        "descricao": "Usado pelo próprio git para autenticar o push e o pull. O Gito não guarda nem vê essa credencial.",
+        "url": ""
+      },
+      {
+        "nome": "GitLab (API v4, só leitura)",
+        "descricao": "Consulta dos Merge Requests com token de acesso pessoal de escopo read_api, informado na tela e guardado só na memória, por servidor. O servidor é o do remoto de cada repositório; nenhuma chamada usa POST, PUT ou DELETE (um teste confere).",
+        "url": ""
+      },
+      {
+        "nome": "delp-git",
+        "descricao": "Antecessor do Gito (estacao/delp-git, porta 7017). Na primeira abertura, as pastas vêm de %APPDATA%\\delp-git\\config.json; o token não. Os dois rodam ao mesmo tempo.",
+        "url": ""
+      },
+      {
+        "nome": "Windows (pasta de Inicialização e PowerShell)",
+        "descricao": "O modo oculto é um atalho na pasta de Inicialização do usuário, que chama o gito.cmd --oculto; o PowerShell sobe o Node sem janela e o parar-gito.cmd encerra o processo que está na porta 7027. Não é serviço nem tarefa agendada.",
+        "url": ""
+      }
     ],
     "links": [
-      { "titulo": "Repositório", "url": "https://gitlab.com/desenvolviemento-fluig/labs/devkittools" },
-      { "titulo": "Contrato de versionamento", "url": "", "arquivo": "GITO.md" }
+      {
+        "titulo": "Repositório",
+        "url": "https://github.com/beyondBitsLtda/Gito"
+      },
+      {
+        "titulo": "Manual de uso (README)",
+        "url": "https://github.com/beyondBitsLtda/Gito/blob/main/README.md"
+      },
+      {
+        "titulo": "Contrato de versionamento (GITO.md)",
+        "url": "https://github.com/beyondBitsLtda/Gito/blob/main/GITO.md"
+      }
     ],
     "contatos": [
-      { "papel": "Responsável técnico", "nome": "Brayan Rodrigues" }
+      {
+        "papel": "Responsável técnico",
+        "nome": "Brayan Rodrigues"
+      }
     ]
   }
 }
