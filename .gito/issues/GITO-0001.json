@@ -4,14 +4,27 @@
   "descricao": "No modo escuro alguns cmapos lista aqui da Issues ficma sem contraste com a cor da lista em branco e a escrita em um tom mais claro.",
   "tipo": "bug",
   "prioridade": "baixa",
-  "status": "aberta",
+  "status": "concluida",
   "responsavel": "Brayan Rodrigues",
   "prazo": "2026-10-09",
-  "versaoAlvo": "0.1.0",
+  "versaoAlvo": "1.1.0",
   "criadaEm": "2026-09-27T05:31:19.352Z",
   "criadaPor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
-  "atualizadaEm": "2026-09-27T05:31:26.672Z",
-  "comentarios": [],
+  "atualizadaEm": "2026-09-27T06:13:39.477Z",
+  "comentarios": [
+    {
+      "quando": "2026-09-27T05:55:09.483Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "texto": "Vou corrigir: no tema escuro o fundo dos campos de lista (select) é translúcido, e o Chrome/Edge no Windows desenha a lista aberta sobre branco mantendo o texto claro. As opções passam a ter fundo sólido do tema.",
+      "evidencias": []
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "texto": "Corrigido na versão 1.1.0-issues-0-1-0.1 (branch Issues_0.1.0). Causa: no tema escuro o fundo dos campos de seleção é translúcido, e o Chrome/Edge no Windows desenhava a lista aberta sobre branco com a letra clara do tema. Agora as opções têm fundo sólido do tema (preto no escuro, branco no claro) — web/app.css. Conferido no Edge: no escuro, a opção sai com fundo rgb(0,0,0) e texto #EAE5DF. Para conferir: modo escuro, aba Issues, abrir as listas Tipo, Prioridade, Situação e Todos os responsáveis.",
+      "evidencias": []
+    }
+  ],
   "evidencias": [],
   "historico": [
     {
@@ -23,6 +36,26 @@
       "quando": "2026-09-27T05:31:26.672Z",
       "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
       "mudanca": "tipo: melhoria → bug"
+    },
+    {
+      "quando": "2026-09-27T05:55:09.483Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "situação: aberta → em-andamento"
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "situação: em-andamento → em-revisao"
+    },
+    {
+      "quando": "2026-09-27T06:08:37.255Z",
+      "autor": "Brayan Rodrigues (via Claude)",
+      "mudanca": "versão alvo: 0.1.0 → 1.1.0"
+    },
+    {
+      "quando": "2026-09-27T06:13:39.477Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "situação: em-revisao → concluida"
     }
   ]
 }

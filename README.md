@@ -73,6 +73,7 @@ ação.
 - **Criar repositório:** numa pasta que ainda não tem versão.
 - **Minhas pastas:** onde procurar (aceita `Z:\...` colado do Explorer), com um navegador de pastas.
 - **Identidade:** pede nome e e-mail uma vez, antes do primeiro commit.
+- **Painel:** as aplicações das suas pastas, com versões, ficha técnica e issues (veja abaixo).
 
 ### A regra que vale mais que qualquer recurso
 
@@ -81,6 +82,43 @@ ação.
 O app não tem rebase, cherry-pick nem edição de histórico. Para quem está
 começando isso é corda para se enforcar; para quem domina git, o VSCode está
 ao lado e faz melhor.
+
+---
+
+## O painel das aplicações
+
+A aba **Painel** mostra cada aplicação que tem um **`gito.json`**. É ele que diz o nome, a versão, o histórico e a ficha técnica. As regras de como mantê-lo estão no **`GITO.md`**, e o Claude as segue sozinho.
+
+- **Versões:** a versão **publicada na `main`**, a de **cada branch** e a da **sua pasta** (o que ainda não foi salvo). As versões são lidas direto do git (`git show <branch>:gito.json`): o Gito não troca de branch nem toca em arquivo. O cartão de cada aplicação desenha isso como uma linha de metrô, com uma estação por branch.
+  - **Branch:** o que está na pasta de cada pessoa e no servidor, e quanto ela está à frente ou atrás da `main`.
+  - **Histórico:** o de versões, da `main` ou da sua pasta.
+  - **Aviso:** o painel avisa quando a `main` recebeu uma versão de branch sem finalizar.
+- **Ficha técnica:** tudo com link e com o selo **no ar / atenção / fora do ar**, conferido desta máquina (HTTP para endereços, conexão TCP para bancos, sem login e sem enviar dado):
+  - **O que é:** descrição, escopo (faz / não faz) e stack.
+  - **Arquitetura:** diagramas (imagem do repositório, código Mermaid ou link).
+  - **Onde roda:** hospedagem de cada ambiente, banco de dados, integrações, links e contatos.
+- **Issues:** melhorias, bugs e tarefas, cada uma com:
+  - **Controle:** prazo, responsável, prioridade, versão alvo e situação (aberta, em andamento, em revisão, concluída, cancelada).
+  - **Registro:** comentários, evidências (imagem, PDF, planilha, até 8 MB) e histórico de cada mudança.
+  - **Ordem:** as vencidas e as críticas aparecem primeiro.
+  - **Onde ficam:** em `.gito/issues/` dentro do repositório, versionadas com o código. Depois de criar ou mudar, salve e envie para a equipe ver.
+- **Issues de todas as aplicações:** no topo do Painel, ao lado de "Aplicações". Junta as issues de todos os repositórios, com a contagem por situação, as vencidas e as que vencem em 7 dias, e filtro por aplicação, tipo e responsável. Três visões, que também existem na aba Issues de cada aplicação:
+  - **Lista:** na ordem de trabalho (vencidas e críticas primeiro). Clicar abre a issue na aplicação.
+  - **Kanban:** uma coluna por situação. Arrastar o cartão para outra coluna (ou Shift + ← →) muda a situação, com o seu nome no histórico da issue.
+  - **Agenda:** o calendário do mês pelo prazo, com o dia de hoje marcado, as vencidas em vermelho e as sem prazo listadas abaixo.
+
+### Como pôr um repositório no painel
+
+1. **Pelo Gito:** na aba Painel, em "Repositórios sem ficha", clique em **Criar ficha**. São criados `gito.json` e `GITO.md` na raiz, e o `CLAUDE.md` ganha a linha `@GITO.md` (ou é criado). Nada existente é apagado.
+   **À mão:** copie os três arquivos de **`modelo/`** para a raiz do repositório. Se o repositório já tem `CLAUDE.md`, acrescente só o conteúdo do `modelo/CLAUDE.md` no fim.
+2. **Preencha o `gito.json`:** nome, sigla, descrição, versão atual e a ficha. Ou peça ao Claude: *"preencha o gito.json seguindo o GITO.md"*.
+3. **Salve e envie.** A partir daí, o Claude atualiza versão, compilação, histórico e ficha a cada mudança, seguindo o `GITO.md`.
+
+**Repositório com várias aplicações:** um `gito.json` na pasta de cada uma (por exemplo, `wcm/widget/minhaWidget/`). O Gito procura até 3 níveis abaixo da raiz.
+
+**O exemplo é o próprio Gito:** veja o `gito.json`, o `GITO.md`, o `CLAUDE.md` e o `docs/arquitetura.svg` desta pasta.
+
+**Segurança da ficha:** o `gito.json` é lido pela equipe inteira. Nunca coloque senha, token nem *connection string* com credencial, nem dado pessoal: o contrato proíbe, e o painel avisa quando algo parece credencial.
 
 ---
 
@@ -130,8 +168,17 @@ npm run teste
 ```
 
 Segurança, os ajustes obrigatórios do git, salvar, versões, realce, árvore,
-branches, junção e GitLab. Os testes da comparação com a plataforma saíram
-junto com ela.
+branches, junção, GitLab e o painel (`teste-painel.js`). O teste do painel usa
+repositórios git de verdade:
+
+- **Versões:** versão por branch sem trocar de branch, e o aviso de `main` sem finalizar.
+- **Descoberta:** o `gito.json` em monorepo.
+- **Issues e evidências:** as tentativas de sair da pasta pelo nome do arquivo ou de subir extensão proibida.
+- **Criar ficha:** nunca sobrescreve.
+- **"No ar":** HTTP 200, 401, 404 e 500, servidor sem HEAD e TCP.
+- **Diagrama:** servido com CSP `sandbox`.
+
+Os testes da comparação com a plataforma saíram junto com ela.
 
 ---
 
@@ -149,7 +196,15 @@ gito/
 │   ├── git.js                A ÚNICA porta para o git
 │   ├── repos.js              varredura das pastas e estado de cada repositório
 │   ├── gitlab.js             Merge Requests (só leitura)
+│   ├── painel.js             gito.json, versões por branch, issues e evidências
+│   ├── verificar.js          "está no ar?" (http/tcp)
 │   └── config.js             %APPDATA%\gito\config.json, a cerca e a herança do delp-git
 ├── web/                      interface, sem framework e sem build (+ os SVGs da marca)
+│   └── painel.js             a aba Painel
+├── modelo/                   o que copiar para os outros repositórios
+│   ├── GITO.md               o contrato de versionamento que o Claude segue
+│   ├── CLAUDE.md             o trecho que importa o GITO.md
+│   └── gito.json             a ficha em branco
+├── gito.json · GITO.md · CLAUDE.md · docs/   o próprio Gito, seguindo o contrato
 └── teste/
 ```

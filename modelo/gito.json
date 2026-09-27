@@ -1,0 +1,49 @@
+{
+  "$gito": 1,
+  "aplicacao": {
+    "nome": "NOME DA APLICAÇÃO",
+    "codigo": "SIGLA",
+    "descricao": "Uma frase: o que é e para quem é.",
+    "tipo": "Widget Fluig",
+    "situacao": "em desenvolvimento",
+    "responsavel": "",
+    "equipe": ""
+  },
+  "versao": "0.1.0",
+  "atualizadoEm": "2026-01-01",
+  "compilacao": { "numero": 1, "data": "2026-01-01", "artefato": "" },
+  "historico": [
+    {
+      "versao": "0.1.0",
+      "data": "2026-01-01",
+      "branch": "main",
+      "tipo": "funcionalidade",
+      "resumo": "Ficha criada no Gito.",
+      "itens": ["Primeiro registro de versão e ficha técnica da aplicação."],
+      "issues": []
+    }
+  ],
+  "ficha": {
+    "escopo": {
+      "objetivo": "",
+      "inclui": [],
+      "naoInclui": []
+    },
+    "stack": [],
+    "arquitetura": {
+      "resumo": "",
+      "diagramas": []
+    },
+    "hospedagem": [
+      { "ambiente": "Produção", "onde": "", "url": "", "verificar": true }
+    ],
+    "bancoDeDados": [],
+    "integracoes": [],
+    "links": [
+      { "titulo": "Repositório", "url": "" }
+    ],
+    "contatos": [
+      { "papel": "Responsável técnico", "nome": "" }
+    ]
+  }
+}

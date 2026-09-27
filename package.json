@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "teste": "node teste/teste-seguranca.js && node teste/teste-git.js && node teste/teste-salvar.js && node teste/teste-versoes.js && node teste/teste-realce.js && node teste/teste-arvore.js && node teste/teste-beco.js && node teste/teste-branches.js && node teste/teste-gitlab.js"
+    "teste": "node teste/teste-seguranca.js && node teste/teste-git.js && node teste/teste-salvar.js && node teste/teste-versoes.js && node teste/teste-realce.js && node teste/teste-arvore.js && node teste/teste-beco.js && node teste/teste-branches.js && node teste/teste-gitlab.js && node teste/teste-painel.js"
   },
   "engines": {
     "node": ">=14"

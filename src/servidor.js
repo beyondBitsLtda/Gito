@@ -38,15 +38,32 @@ var git = require('./git');
 var repos = require('./repos');
 var config = require('./config');
 var gitlab = require('./gitlab');
+var painel = require('./painel');
+var verificar = require('./verificar');
 
 var WEB = path.join(__dirname, '..', 'web');
+
+/* O CODIGO DO SERVIDOR MUDOU DEPOIS QUE O GITO ABRIU?
+   A interface (web/) e lida do disco a cada pedido e pega mudancas sozinha;
+   o servidor (src/, app.js) so muda reabrindo. Sem este aviso, a tela nova
+   chamava uma rota que o servidor velho nao tinha e aparecia "nao existe:
+   GET /api/painel" - visto em 26/09, logo depois de o painel chegar. */
+var INICIO = Date.now();
+function codigoMudou() {
+    var arqs = [path.join(__dirname, '..', 'app.js')];
+    try { fs.readdirSync(__dirname).forEach(function (f) { if (/\.js$/.test(f)) arqs.push(path.join(__dirname, f)); }); } catch (e) { /* segue */ }
+    return arqs.some(function (a) { try { return fs.statSync(a).mtimeMs > INICIO; } catch (e) { return false; } });
+}
 var CORPO_MAX = 256 * 1024;
+/* Evidencias de issue vao em base64 no corpo: ate 3 arquivos de 8 MB. */
+var CORPO_MAX_EVIDENCIA = 34 * 1024 * 1024;
 
 var TIPOS = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
     '.js': 'application/javascript; charset=utf-8',
-    '.svg': 'image/svg+xml'
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png'
 };
 
 function criar(token) {
@@ -148,12 +165,13 @@ function criar(token) {
             '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + (60 * 60 * 24 * 365));
     }
 
-    function lerCorpo(req) {
+    function lerCorpo(req, limite) {
+        limite = limite || CORPO_MAX;
         return new Promise(function (resolve, reject) {
             var bruto = '';
             req.on('data', function (d) {
                 bruto += d;
-                if (bruto.length > CORPO_MAX) { req.destroy(); reject(new Error('pedido grande demais')); }
+                if (bruto.length > limite) { req.destroy(); reject(new Error('pedido grande demais')); }
             });
             req.on('end', function () {
                 if (!bruto) return resolve({});
@@ -178,10 +196,26 @@ function criar(token) {
         return path.resolve(p);
     }
 
+    /* Quem assina uma acao do painel (issue, comentario): a mesma identidade
+       que assina os commits. Sem ela, recusa - como o salvar. */
+    function autorDaAcao() {
+        return git.identidade().then(function (id) {
+            if (!id.completa) {
+                throw Object.assign(new Error('antes, diga quem você é (nome e e-mail) — é o que assina issues e comentários.'),
+                                    { codigo: 'SEM_IDENTIDADE' });
+            }
+            return id.nome + ' <' + id.email + '>';
+        });
+    }
+
     /* ====================================================================
        ROTAS
        ==================================================================== */
     var ROTAS = {
+        'GET /api/versao': function () {
+            return Promise.resolve({ desatualizado: codigoMudou() });
+        },
+
         'GET /api/estado': function () {
             return Promise.all([git.versao(), git.identidade()]).then(function (r) {
                 var cfg = config.ler();
@@ -375,6 +409,121 @@ function criar(token) {
             return repos.navegar(p ? path.resolve(p) : null);
         },
 
+        /* ---------------- O PAINEL DAS APLICACOES ----------------
+           Versoes (lidas do git, de cada branch), ficha tecnica, verificacao
+           de servicos e issues. O contrato do gito.json esta em GITO.md. */
+        'GET /api/painel': function () {
+            var itens = repos.candidatos(config.ler().pastas).filter(function (r) { return r.versionado && !r.erro; });
+            var aplicacoes = [], semFicha = [];
+            return Promise.all(itens.map(function (r) {
+                var subs = painel.acharAplicacoes(r.caminho);
+                if (!subs.length) { semFicha.push({ caminho: r.caminho, nome: r.nome }); return null; }
+                return Promise.all(subs.map(function (sub) {
+                    var dir = painel.pastaDaApp(r.caminho, sub);
+                    var ficha = painel.lerFichaDaPasta(dir);
+                    return painel.versoes(r.caminho, sub, 8).then(null, function (e) { return { erro: e.message, branches: [] }; })
+                        .then(function (v) {
+                            aplicacoes.push({ repo: r.caminho, repoNome: r.nome, sub: sub,
+                                              ficha: ficha, versoes: v, issues: painel.resumoIssues(dir) });
+                        });
+                }));
+            })).then(function () {
+                aplicacoes.sort(function (a, b) {
+                    var na = a.ficha && a.ficha.dados ? a.ficha.dados.aplicacao.nome : a.repoNome;
+                    var nb = b.ficha && b.ficha.dados ? b.ficha.dados.aplicacao.nome : b.repoNome;
+                    return na.localeCompare(nb, 'pt-BR');
+                });
+                semFicha.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+                return { aplicacoes: aplicacoes, semFicha: semFicha };
+            });
+        },
+
+        'GET /api/painel/app': function (req, url) {
+            var repo = caminhoValidado(url.searchParams.get('p'));
+            var sub = painel.subValida(url.searchParams.get('sub'));
+            var dir = painel.pastaDaApp(repo, sub);
+            var ficha = painel.lerFichaDaPasta(dir);
+            if (!ficha) throw Object.assign(new Error('esta pasta não tem gito.json'), { codigo: 'SEM_FICHA' });
+            return painel.versoes(repo, sub).then(function (v) {
+                return { repo: repo, repoNome: path.basename(repo), sub: sub, ficha: ficha, versoes: v,
+                         issues: painel.resumoIssues(dir) };
+            });
+        },
+
+        'GET /api/painel/verificar': function (req, url) {
+            var repo = caminhoValidado(url.searchParams.get('p'));
+            var dir = painel.pastaDaApp(repo, url.searchParams.get('sub'));
+            var ficha = painel.lerFichaDaPasta(dir);
+            if (!ficha || !ficha.dados) return [];
+            return verificar.verificarTodos(verificar.alvosDaFicha(ficha.dados.ficha), url.searchParams.get('forcar') === '1');
+        },
+
+        'GET /api/painel/issues': function (req, url) {
+            var repo = caminhoValidado(url.searchParams.get('p'));
+            var dir = painel.pastaDaApp(repo, url.searchParams.get('sub'));
+            var ficha = painel.lerFichaDaPasta(dir);
+            if (!ficha || !ficha.dados) throw Object.assign(new Error('esta pasta não tem gito.json válido'), { codigo: 'SEM_FICHA' });
+            var l = painel.listarIssues(dir);
+            /* Sugestoes de responsavel: quem ja aparece nas issues e nos contatos. */
+            var pessoas = {};
+            l.issues.forEach(function (i) { if (i.responsavel) pessoas[i.responsavel] = 1; });
+            (ficha.dados.ficha.contatos || []).forEach(function (c) { if (c && c.nome) pessoas[c.nome] = 1; });
+            if (ficha.dados.aplicacao.responsavel) pessoas[ficha.dados.aplicacao.responsavel] = 1;
+            return git.identidade().then(function (id) {
+                if (id.nome) pessoas[id.nome] = 1;
+                return { codigo: ficha.dados.aplicacao.codigo, issues: l.issues, problemas: l.problemas,
+                         pessoas: Object.keys(pessoas).sort(), eu: id.nome || '',
+                         tipos: painel.TIPOS_ISSUE, prioridades: painel.PRIORIDADES, situacoes: painel.SITUACOES };
+            });
+        },
+
+        /* As issues de TODAS as aplicações das pastas cadastradas: a Lista, o
+           Kanban e a Agenda do painel unificado (GITO-0002). Só leitura: mudar
+           uma issue continua passando por POST /api/painel/issue. */
+        'GET /api/painel/issues-todas': function () {
+            var itens = repos.candidatos(config.ler().pastas).filter(function (r) { return r.versionado && !r.erro; });
+            var d = painel.issuesDeTodas(itens);
+            return git.identidade().then(function (id) {
+                var pessoas = {};
+                d.issues.forEach(function (i) { if (i.responsavel) pessoas[i.responsavel] = 1; });
+                if (id.nome) pessoas[id.nome] = 1;
+                return Object.assign(d, { pessoas: Object.keys(pessoas).sort(), eu: id.nome || '',
+                                          tipos: painel.TIPOS_ISSUE, prioridades: painel.PRIORIDADES, situacoes: painel.SITUACOES });
+            });
+        },
+
+        'POST /api/painel/issue': function (req, url, corpo) {
+            var repo = caminhoValidado(corpo.p);
+            var dir = painel.pastaDaApp(repo, corpo.sub);
+            var ficha = painel.lerFichaDaPasta(dir);
+            if (!ficha || !ficha.dados) throw new Error('esta pasta não tem gito.json válido');
+            return autorDaAcao().then(function (autor) {
+                return painel.salvarIssue(dir, ficha.dados.aplicacao.codigo, corpo.id || null, corpo.dados || {}, autor);
+            });
+        },
+
+        'POST /api/painel/comentario': function (req, url, corpo) {
+            var repo = caminhoValidado(corpo.p);
+            var dir = painel.pastaDaApp(repo, corpo.sub);
+            if (!painel.lerFichaDaPasta(dir)) throw new Error('esta pasta não tem gito.json');
+            if ((corpo.anexos || []).length > 3) throw new Error('no máximo 3 evidências por comentário');
+            return autorDaAcao().then(function (autor) {
+                return painel.comentar(dir, corpo.id, corpo.texto, corpo.anexos, autor);
+            });
+        },
+
+        'POST /api/painel/criar-ficha': function (req, url, corpo) {
+            var repo = caminhoValidado(corpo.p);
+            if (!repos.ehRepo(repo)) throw new Error('esta pasta não é um repositório');
+            return git.remotes(repo).then(function (rs) {
+                var web = '';
+                try { web = rs.length ? git.enderecoWeb(rs[0].url) : ''; } catch (e) { web = ''; }
+                /* Endereco com usuario/senha embutidos nunca vai para a ficha. */
+                if (/\/\/[^/]*@/.test(web)) web = web.replace(/\/\/[^/]*@/, '//');
+                return painel.criarFicha(repo, web);
+            });
+        },
+
         'GET /api/config': function () {
             return Promise.resolve(config.ler());
         },
@@ -472,6 +621,16 @@ function criar(token) {
 
                 return servirArquivo(res, 'index.html');
             }
+            /* O logo fica na RAIZ da pasta do Gito (e nao em web/): e o
+               arquivo que a equipe troca, e trocar la basta. */
+            if (url.pathname === '/logo.png') {
+                return fs.readFile(path.join(__dirname, '..', 'logo.png'), function (e, dados) {
+                    if (e) { res.writeHead(404); return res.end('sem logo'); }
+                    res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache',
+                                         'X-Content-Type-Options': 'nosniff' });
+                    res.end(dados);
+                });
+            }
             return servirArquivo(res, url.pathname);
         }
 
@@ -526,10 +685,44 @@ function criar(token) {
             return proc.stdout.pipe(res);
         }
 
-        var acao = ROTAS[rota];
-        if (!acao) return erro(res, 404, 'ROTA', 'nao existe: ' + rota);
+        /* DIAGRAMA OU EVIDENCIA: bytes, nao JSON. Imagem abre na pagina; o
+           resto desce como anexo. O CSP "sandbox" vale para quem abrir o
+           arquivo direto numa aba: um SVG com script nao roda nada na origem
+           do app (que e a mesma da API). */
+        if (rota === 'GET /api/painel/arquivo') {
+            var achado;
+            try {
+                var repoA = caminhoValidado(url.searchParams.get('p'));
+                var dirA = painel.pastaDaApp(repoA, url.searchParams.get('sub'));
+                var ev = url.searchParams.get('id');
+                if (ev && !painel.idValido(ev)) throw Object.assign(new Error('ID inválido'), { codigo: 'ID' });
+                var rel = ev ? '.gito/evidencias/' + ev + '/' + path.basename(String(url.searchParams.get('arq') || ''))
+                             : String(url.searchParams.get('arq') || '');
+                achado = painel.arquivoDaApp(dirA, rel, !!ev);
+            } catch (e) {
+                return erro(res, e.codigo === 'NAO_EXISTE' ? 404 : 400, e.codigo || 'ERRO', e.message);
+            }
+            var nomeA = path.basename(achado.arquivo).replace(/[^\w.\- ()]/g, '_');
+            res.writeHead(200, {
+                'Content-Type': achado.tipo,
+                'Content-Disposition': (achado.imagem ? 'inline' : 'attachment') + '; filename="' + nomeA + '"',
+                'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+                'X-Content-Type-Options': 'nosniff',
+                'Cache-Control': 'no-store'
+            });
+            return fs.createReadStream(achado.arquivo).pipe(res);
+        }
 
-        var corpo = (req.method === 'POST') ? lerCorpo(req) : Promise.resolve({});
+        var acao = ROTAS[rota];
+        if (!acao) {
+            return erro(res, 404, 'ROTA', codigoMudou()
+                ? 'o Gito foi atualizado depois de aberto: feche a janela do Gito e abra de novo pelo gito.cmd.'
+                : 'nao existe: ' + rota);
+        }
+
+        var corpo = (req.method === 'POST')
+            ? lerCorpo(req, rota === 'POST /api/painel/comentario' ? CORPO_MAX_EVIDENCIA : CORPO_MAX)
+            : Promise.resolve({});
 
         corpo
             .then(function (c) { return acao(req, url, c); })

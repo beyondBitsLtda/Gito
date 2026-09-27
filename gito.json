@@ -3,20 +3,56 @@
   "aplicacao": {
     "nome": "Gito",
     "codigo": "GITO",
-    "descricao": "Aplicação local que deixa quem desenvolve versionar o trabalho sem terminal e sem saber git: roda na máquina da pessoa, abre no navegador e opera o git com a identidade e as permissões dela.",
+    "descricao": "Aplicação local que deixa quem desenvolve versionar o trabalho sem terminal e sem saber git e dá à equipe o painel das aplicações: versões por branch, ficha técnica e issues de todos os repositórios.",
     "tipo": "Aplicação local",
     "situacao": "em produção",
     "responsavel": "Brayan Rodrigues",
     "equipe": "TI / Desenvolvimento Fluig"
   },
-  "versao": "1.0.0",
-  "atualizadoEm": "2026-09-26",
+  "versao": "1.1.0-issues-0-1-0.1",
+  "atualizadoEm": "2026-09-27",
   "compilacao": {
-    "numero": 2,
-    "data": "2026-09-26",
+    "numero": 3,
+    "data": "2026-09-27",
     "artefato": ""
   },
   "historico": [
+    {
+      "versao": "1.1.0-issues-0-1-0.1",
+      "data": "2026-09-27",
+      "branch": "Issues_0.1.0",
+      "tipo": "funcionalidade",
+      "resumo": "O painel das aplicações chega ao repositório do Gito, com as issues de todas as aplicações numa visão só (lista, kanban e agenda) e as listas legíveis no modo escuro.",
+      "itens": [
+        "Código do painel (versões por branch, ficha técnica, verificação de serviços e issues) trazido para este repositório, a partir da cópia em uso no devkittools.",
+        "Painel > \"Issues de todas as aplicações\": as issues de todos os repositórios juntas, com contagem por situação, vencidas e as que vencem em 7 dias, e filtro por aplicação, tipo, responsável e busca.",
+        "Visão Kanban: uma coluna por situação; arrastar o cartão (ou Shift + ← →) muda a situação e registra quem mudou no histórico da issue.",
+        "Visão Agenda: calendário do mês pelo prazo, com o dia de hoje, as vencidas em vermelho, aviso das vencidas de meses anteriores e a lista das sem prazo.",
+        "As visões Kanban e Agenda também na aba Issues de cada aplicação; clicar numa issue da visão geral abre a aplicação com ela aberta.",
+        "Modo escuro: a lista aberta dos campos de seleção (tipo, prioridade, situação, responsável) aparecia branca com letra clara; agora tem fundo escuro e contraste.",
+        "O \"hoje\" do painel passa a ser o do relógio local: depois das 21h o prazo do dia aparecia vencido e a ficha criada nascia com a data seguinte.",
+        "Correção: trocar para \"Issues\" enquanto as aplicações carregavam desenhava os cartões por cima das issues."
+      ],
+      "issues": [
+        "GITO-0001",
+        "GITO-0002"
+      ]
+    },
+    {
+      "versao": "1.1.0-auto-testes-gen.1",
+      "data": "2026-09-26",
+      "branch": "Auto_Testes_Gen",
+      "tipo": "funcionalidade",
+      "resumo": "Painel das aplicações: versão da main e de cada branch, ficha técnica com verificação de serviços e controle de issues.",
+      "itens": [
+        "Nova aba Painel: lista as aplicações que têm gito.json, com a versão publicada na main e a de cada branch, lidas direto do git.",
+        "Ficha técnica: escopo, stack, diagramas, hospedagem, banco de dados, integrações e links, com verificação se cada serviço está no ar.",
+        "Issues por aplicação: melhorias, bugs e tarefas com prazo, responsável, situação, comentários e evidências, versionadas em .gito/.",
+        "Contrato de versionamento (GITO.md) para o Claude manter o gito.json atualizado em cada repositório.",
+        "Botão para criar a ficha num repositório que ainda não tem."
+      ],
+      "issues": []
+    },
     {
       "versao": "1.0.0",
       "data": "2026-09-26",
@@ -39,6 +75,19 @@
       "issues": []
     },
     {
+      "versao": "1.0.0-auto-testes-gen.1",
+      "data": "2026-09-26",
+      "branch": "Auto_Testes_Gen",
+      "tipo": "funcionalidade",
+      "resumo": "Primeira versão do Gito, a partir do delp-git, com identidade visual nova e sem a comparação com a plataforma.",
+      "itens": [
+        "Identidade de mapa de metrô: repositórios como estações, histórico como linha; tema claro e escuro.",
+        "Porta 7027 e configuração própria, para rodar ao lado do delp-git; as pastas vêm do delp-git na primeira abertura.",
+        "Cookie de acesso SameSite=Strict."
+      ],
+      "issues": []
+    },
+    {
       "versao": "0.1.0",
       "data": "2026-09-26",
       "branch": "main",
@@ -52,7 +101,7 @@
   ],
   "ficha": {
     "escopo": {
-      "objetivo": "Fazer quem desenvolve versionar o próprio código sem precisar do terminal nem de conhecer os comandos do git, mostrando de uma vez o que ficou sem salvar ou sem enviar em todos os repositórios, e sem nenhuma operação que faça alguém perder código.",
+      "objetivo": "Fazer quem desenvolve versionar o próprio código sem precisar do terminal nem de conhecer os comandos do git, sem nenhuma operação que faça alguém perder código, e dar à equipe uma visão única das aplicações: versões, ficha técnica e pendências.",
       "inclui": [
         "Varrer as pastas cadastradas (até 2 níveis) e mostrar o estado de cada repositório, apontando as pastas com código e sem versão.",
         "Salvar (add + commit) só os arquivos marcados, com o diff de cada arquivo e a versão anterior para comparar.",
@@ -64,7 +113,12 @@
         "Criar repositório numa pasta que ainda não tem versão.",
         "Cadastrar as pastas de repositórios (aceita unidade mapeada, como Z:\\, colada do Explorer), com um navegador de pastas.",
         "Pedir nome e e-mail do git uma vez, antes do primeiro commit, para a autoria sair certa.",
-        "Abrir pelo gito.cmd, criar atalho na Área de Trabalho e, opcionalmente, subir oculto com o Windows."
+        "Abrir pelo gito.cmd, criar atalho na Área de Trabalho e, opcionalmente, subir oculto com o Windows.",
+        "Painel das aplicações: a versão publicada na main, a de cada branch (lida do git, sem trocar de branch) e a da pasta, com o histórico de versões.",
+        "Ficha técnica de cada aplicação (gito.json) com a verificação de \"no ar\" dos serviços: HTTP para endereços e TCP para bancos.",
+        "Issues por aplicação em .gito/issues: tipo, prioridade, responsável, prazo, situação, comentários, evidências e histórico de cada mudança.",
+        "Issues de todas as aplicações numa visão só, com as visões Lista, Kanban (mudar a situação arrastando) e Agenda (calendário pelo prazo).",
+        "Criar a ficha (gito.json, GITO.md e a linha @GITO.md no CLAUDE.md) num repositório que ainda não tem, sem sobrescrever nada."
       ],
       "naoInclui": [
         "Não faz rebase, cherry-pick nem edição de histórico: nenhuma operação que possa fazer alguém perder código.",
@@ -73,7 +127,9 @@
         "Não compara com a plataforma Fluig (a aba \"Fluig\" do delp-git foi removida).",
         "Não é acessível pela rede: escuta só em 127.0.0.1, para a pessoa que o abriu.",
         "Não instala nada, não roda como serviço, não mexe no registro e não precisa de administrador.",
-        "Não roda git fora das pastas que a pessoa cadastrou (o navegador de pastas só lista pastas para escolher)."
+        "Não roda git fora das pastas que a pessoa cadastrou (o navegador de pastas só lista pastas para escolher).",
+        "Não sincroniza as issues com GitLab ou GitHub Issues: elas são arquivos do repositório e chegam à equipe quando alguém salva e envia.",
+        "Não apaga issue, comentário nem evidência."
       ]
     },
     "stack": [
@@ -82,14 +138,23 @@
       "JavaScript no navegador sem framework e sem build, HTML e CSS (tema claro e escuro, fonte Barlow com alternativa local)",
       "API REST v4 do GitLab (só leitura, token read_api)",
       "Scripts .cmd do Windows com PowerShell: gito.cmd (abrir e modo oculto), criar-atalho.cmd, iniciar-com-o-windows.cmd e parar-gito.cmd",
-      "Testes em Node puro (teste/*.js), rodados com npm run teste: segurança, ajustes do git, salvar, versões, realce, árvore, junção, branches e GitLab"
+      "Contrato de versionamento GITO.md e modelo em branco em modelo/ (gito.json, GITO.md e CLAUDE.md) para os outros repositórios",
+      "Testes em Node puro (teste/*.js), rodados com npm run teste: segurança, ajustes do git, salvar, versões, realce, árvore, junção, branches, GitLab e o painel (com repositórios git de verdade)"
     ],
     "arquitetura": {
-      "resumo": "Um servidor Node (app.js + src/) sobe na máquina de quem desenvolve, em 127.0.0.1:7027, e entrega a interface (web/) e uma API JSON (/api/...). Rodar na sessão da própria pessoa é a decisão central: a unidade Z: existe, as permissões são as dela, os commits saem com a autoria dela e o push usa o Git Credential Manager já instalado. src/git.js é a única porta para o git: todo comando sai dali por spawn, com lista de argumentos, shell desligado e os ajustes --no-optional-locks, core.quotepath=false, core.longpaths=true e GIT_TERMINAL_PROMPT=0. src/repos.js varre as pastas e calcula o estado de cada repositório; src/gitlab.js consulta os Merge Requests por HTTPS, só com GET, no servidor de onde vem o remoto do repositório. Segurança: escuta só em 127.0.0.1, token por instalação (cabeçalho X-Gito-Token ou cookie HttpOnly; SameSite=Strict), Host e Origin conferidos contra DNS rebinding, Content-Security-Policy sem nada de fora e cerca que só aceita caminhos dentro das pastas cadastradas (recusa \"..\"). Não há banco de dados: a configuração de cada pessoa (pastas e token) fica em %APPDATA%\\gito\\config.json; no modo oculto, a saída e os erros vão para %LOCALAPPDATA%\\gito\\saida.log e erros.log; o token do GitLab fica só na memória e some ao fechar o app. O código pode ficar numa pasta de rede e cada pessoa roda de lá.",
+      "resumo": "Um servidor Node (app.js + src/) sobe na máquina de quem desenvolve, em 127.0.0.1:7027, e entrega a interface (web/) e uma API JSON (/api/...). Rodar na sessão da própria pessoa é a decisão central: a unidade Z: existe, as permissões são as dela, os commits saem com a autoria dela e o push usa o Git Credential Manager já instalado. src/git.js é a única porta para o git: todo comando sai dali por spawn, com lista de argumentos, shell desligado e os ajustes --no-optional-locks, core.quotepath=false, core.longpaths=true e GIT_TERMINAL_PROMPT=0. src/repos.js varre as pastas e calcula o estado de cada repositório; src/painel.js lê o gito.json de cada aplicação (até 3 níveis), as versões de cada branch com git show e as issues de .gito/issues; src/verificar.js confere se os serviços da ficha estão no ar; src/gitlab.js consulta os Merge Requests por HTTPS, só com GET, no servidor de onde vem o remoto do repositório. Segurança: escuta só em 127.0.0.1, token por instalação (cabeçalho X-Gito-Token ou cookie HttpOnly; SameSite=Strict), Host e Origin conferidos contra DNS rebinding, Content-Security-Policy sem nada de fora e cerca que só aceita caminhos dentro das pastas cadastradas (recusa \"..\"). Não há banco de dados: a configuração de cada pessoa (pastas e token) fica em %APPDATA%\\gito\\config.json; no modo oculto, a saída e os erros vão para %LOCALAPPDATA%\\gito\\saida.log e erros.log; o token do GitLab fica só na memória e some ao fechar o app; as issues e as evidências são arquivos versionados em .gito/ dentro de cada aplicação. O código pode ficar numa pasta de rede e cada pessoa roda de lá.",
       "diagramas": [
+        {
+          "titulo": "Componentes",
+          "arquivo": "docs/arquitetura.svg"
+        },
         {
           "titulo": "Como o Gito opera o git na máquina de quem desenvolve",
           "mermaid": "flowchart LR\n  P[Pessoa] -->|gito.cmd ou atalho| S[Servidor Node<br/>127.0.0.1:7027]\n  P -->|navegador| UI[Interface<br/>web/index.html]\n  UI -->|API JSON + token| S\n  S -->|config.js: pastas e token| CFG[(%APPDATA%\\gito<br/>config.json)]\n  S -->|git.js: spawn sem shell| G[Git for Windows]\n  G -->|lê e grava só nas pastas cadastradas| R[(Repositórios<br/>da pessoa, inclusive Z:)]\n  G -->|push e pull<br/>Git Credential Manager| REM[Servidor git<br/>GitLab / GitHub]\n  S -->|gitlab.js: só GET, read_api| API[API do GitLab]"
+        },
+        {
+          "titulo": "Como o painel lê as versões",
+          "mermaid": "flowchart LR\n  P[Painel] -->|git show main:gito.json| M[versão publicada]\n  P -->|git show branch:gito.json| B[versão de cada branch]\n  P -->|disco| W[versão na sua pasta]\n  P -->|.gito/issues| I[issues]"
         }
       ]
     },
