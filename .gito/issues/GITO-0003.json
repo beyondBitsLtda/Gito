@@ -1,0 +1,23 @@
+{
+  "id": "GITO-0003",
+  "titulo": "Criar interpretador grafico dos diagramas na ficha técnica.",
+  "descricao": "- Criar interpretador grafico dos diagramas na ficha técnica.",
+  "tipo": "melhoria",
+  "prioridade": "baixa",
+  "status": "aberta",
+  "responsavel": "Brayan Rodrigues",
+  "prazo": "2026-10-10",
+  "versaoAlvo": "1.1.0",
+  "criadaEm": "2026-09-28T01:33:06.768Z",
+  "criadaPor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+  "atualizadaEm": "2026-09-28T01:33:06.768Z",
+  "comentarios": [],
+  "evidencias": [],
+  "historico": [
+    {
+      "quando": "2026-09-28T01:33:06.768Z",
+      "autor": "Brayan Rodrigues <brayan.rodrigues@delp.com.br>",
+      "mudanca": "issue criada"
+    }
+  ]
+}
